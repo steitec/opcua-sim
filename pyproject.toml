@@ -53,9 +53,4 @@ opcua_sim = ["profiles/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-filterwarnings = [
-    "error",
-    # Windows only: a client closes its connection and asyncio.run() ends before the proactor has
-    # finished closing it. Nothing leaks, the process or loop is ending anyway.
-    "ignore:Exception ignored in. <function _ProactorBasePipeTransport.__del__:pytest.PytestUnraisableExceptionWarning",
-]
+filterwarnings = ["error"]
