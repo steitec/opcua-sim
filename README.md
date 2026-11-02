@@ -9,12 +9,14 @@
 [![PyPI](https://img.shields.io/pypi/v/opcua-sim?v=0.1.0)](https://pypi.org/project/opcua-sim/)
 [![Python](https://img.shields.io/pypi/pyversions/opcua-sim?v=0.1.0)](https://pypi.org/project/opcua-sim/)
 [![License](https://img.shields.io/pypi/l/opcua-sim?v=0.1.0)](https://github.com/steitec/opcua-sim/blob/main/LICENSE)
+[![Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://opcua-sim.steitec.net)
 
 Simulated OPC UA devices that **behave and fail**: a drive that ramps up after `Start` and
 latches a trip until `Reset`, a transmitter whose broken sensor reads `BadSensorFailure` with
 health `FAILURE` and 3.6 mA on the loop, alarms that arrive as real OPC UA events and wait for
 your `Acknowledge`. Develop and test SCADA links, HMIs, gateways and data loggers without the
-plant, also in CI.
+plant, also in CI. **[Look at it in your browser](https://opcua-sim.steitec.net)**, no
+install needed.
 
 ```console
 $ opcua-sim serve --bench examples/plant.yaml &
@@ -42,6 +44,9 @@ $ opcua-sim inject server delay seconds=5
 $ opcua-sim read pump.Speed --timeout 1
 opcua-sim: no answer in time
 ```
+
+Walkthroughs, CI recipes and troubleshooting are in the
+[wiki](https://github.com/steitec/opcua-sim/wiki); this README is the reference.
 
 ## Why
 
@@ -282,9 +287,9 @@ Do not put this on a network you do not trust. It is a test tool:
 
 ## Browser demo
 
-[`web/`](web/) holds a static demo page. It runs the real device code in the browser with
-[Pyodide](https://pyodide.org), but not the OPC UA wire protocol, because a browser has no TCP
-sockets. To test a client, install opcua-sim.
+**[Try it at opcua-sim.steitec.net](https://opcua-sim.steitec.net).** The page runs the real device
+code in the browser with [Pyodide](https://pyodide.org), but not the OPC UA wire protocol, because a
+browser has no TCP sockets. To test a client, install opcua-sim. The source is in [`web/`](web/).
 
 ## License
 
