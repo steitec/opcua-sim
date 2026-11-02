@@ -328,9 +328,123 @@ class EnergyMeter(Model):
         return [before]
 
 
+class PlcMachine(Model):
+    """A small PLC program: run and reset bits, a ramp, a part counter, a latching fault.
+
+    PLC servers publish the variables of whatever program runs on them, so the profiles of
+    real PLCs share this program and differ in how their server presents it.
+    """
+
+    VALUES = {"run": True, "reset": True, "speed_setpoint": True, "speed": False,
+              "temperature": False, "parts": False, "fault": False, "fault_code": False,
+              "mode_text": False, "error_text": False}
+    FLAGS = ()
+    FAULTS = {"trip": {"code": 1}, "plc_stop": {}}
+    DEFAULTS = {"ramp": 200.0, "max_speed": 1500.0, "speed_setpoint": 1000.0, "ambient": 22.0,
+                "parts_per_revolution": 0.01}
+
+    def setup(self) -> None:
+        if self.params["max_speed"] <= 0 or self.params["ramp"] <= 0:
+            raise ValueError("max_speed and ramp must be positive")
+        self.values.update(run=False, reset=False, speed_setpoint=self.params["speed_setpoint"],
+                           speed=0.0, temperature=self.params["ambient"], parts=0, fault=False,
+                           fault_code=0, mode_text="RUN", error_text="NoError")
+        self.parts = 0.0
+        self.reset_before = False
+
+    def step(self, dt: float) -> None:
+        values = self.values
+        if "plc_stop" in self.active:
+            # Program stopped: nothing is calculated any more, the outputs are off.
+            values.update(speed=0.0, mode_text="PROGRAM")
+            self.health = CHECK_FUNCTION
+            return
+        values["mode_text"] = "RUN"
+        if "trip" in self.active and not values["fault"]:
+            values.update(fault=True, fault_code=int(self.active["trip"]["code"]))
+        if values["reset"] and not self.reset_before and "trip" not in self.active:
+            values.update(fault=False, fault_code=0)
+        self.reset_before = values["reset"]
+        target = 0.0
+        if values["run"] and not values["fault"]:
+            target = min(max(0.0, values["speed_setpoint"]), self.params["max_speed"])
+        if values["fault"]:
+            values["speed"] = 0.0
+        else:
+            ramp = self.params["ramp"] * dt
+            values["speed"] += max(-ramp, min(ramp, target - values["speed"]))
+        self.parts += values["speed"] / 60.0 * dt * self.params["parts_per_revolution"]
+        values["parts"] = int(self.parts)
+        warm = self.params["ambient"] + 40.0 * values["speed"] / self.params["max_speed"]
+        values["temperature"] += (warm - values["temperature"]) * min(1.0, dt / 10.0)
+        values["error_text"] = "MajorFault" if values["fault"] else "NoError"
+        if values["fault"]:
+            self.health = FAILURE
+
+
+class BarcodeReader(Model):
+    """A stationary reader: scans on its own while active and counts good and bad reads."""
+
+    VALUES = {"scan_active": True, "device_status": False, "last_scan_data": False,
+              "temperature": False, "total": False, "ok": False, "not_ok": False, "portion": False}
+    METHODS = {"scan_stop": "scan_stop", "reset": "reset"}
+    FAULTS = {"read_fail": {}, "device_error": {}}
+    DEFAULTS = {"codes": ["4006381333931", "0123456789012", "LEUZE-TEST-01"], "interval": 1.0,
+                "temperature": 38.0}
+    IDLE, ERROR, SCANNING, BUSY = range(4)      # DeviceStatusEnumeration of OPC UA AutoID
+
+    def setup(self) -> None:
+        codes, interval = self.params["codes"], self.params["interval"]
+        if not isinstance(codes, list) or not codes:
+            raise ValueError("codes must be a non-empty list")
+        if interval <= 0:
+            raise ValueError("interval must be positive")
+        self.values.update(scan_active=True, device_status=self.SCANNING, last_scan_data="",
+                           temperature=float(self.params["temperature"]), total=0, ok=0, not_ok=0,
+                           portion=0.0)
+        self.waited = 0.0
+        self.next_code = 0
+
+    def step(self, dt: float) -> None:
+        values = self.values
+        if "device_error" in self.active:
+            values["device_status"] = self.ERROR
+            self.health = FAILURE
+            return
+        values["device_status"] = self.SCANNING if values["scan_active"] else self.IDLE
+        if not values["scan_active"]:
+            return
+        self.waited += dt
+        while self.waited >= self.params["interval"]:
+            self.waited -= self.params["interval"]
+            values["total"] += 1
+            if "read_fail" in self.active:
+                values["not_ok"] += 1
+                values["last_scan_data"] = ""
+            else:
+                values["ok"] += 1
+                codes = self.params["codes"]
+                values["last_scan_data"] = str(codes[self.next_code % len(codes)])
+                self.next_code += 1
+            values["portion"] = 100.0 * values["ok"] / values["total"]
+        if "read_fail" in self.active:
+            self.health = OFF_SPEC
+
+    def scan_stop(self) -> None:
+        self.values["scan_active"] = False
+
+    def reset(self) -> None:
+        if "device_error" in self.active:
+            raise StatusError("BadInvalidState")
+        self.values.update(total=0, ok=0, not_ok=0, portion=0.0, scan_active=True)
+        self.waited = 0.0
+
+
 MODELS: dict[str, type[Model]] = {
     "transmitter": Transmitter,
     "temperature_controller": TemperatureController,
     "drive": Drive,
     "energy_meter": EnergyMeter,
+    "plc_machine": PlcMachine,
+    "barcode_reader": BarcodeReader,
 }

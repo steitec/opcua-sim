@@ -12,8 +12,8 @@ from .models import MODELS
 from .signals import KINDS
 
 TYPES = ("Boolean", "Byte", "Int16", "UInt16", "Int32", "UInt32", "Int64", "UInt64",
-         "Float", "Double", "String")
-NUMERIC = tuple(t for t in TYPES if t not in ("Boolean", "String"))
+         "Float", "Double", "String", "LocalizedText")
+NUMERIC = tuple(t for t in TYPES if t not in ("Boolean", "String", "LocalizedText"))
 LIMITS = ("high_high", "high", "low", "low_low")
 DEFAULT_SEVERITY = {"high_high": 900, "high": 700, "low": 700, "low_low": 900}
 IDENTIFICATION = ("manufacturer", "model", "serial_number", "hardware_revision",
@@ -37,6 +37,9 @@ class VariableSpec:
     model: str | None = None
     source: dict[str, Any] | None = None
     value: Any = None
+    node_id: str | int | None = None        # with an address_space: the published identifier
+    path: list[str] = field(default_factory=list)
+    browse_namespace: int | None = None
 
 
 @dataclass
@@ -53,6 +56,24 @@ class MethodSpec:
     description: str = ""
     inputs: list[ArgumentSpec] = field(default_factory=list)
     outputs: list[ArgumentSpec] = field(default_factory=list)
+    node_id: str | int | None = None
+    path: list[str] = field(default_factory=list)
+    browse_namespace: int | None = None
+
+
+@dataclass
+class FolderSpec:
+    path: list[str]
+    node_id: str | int | None = None
+    browse_namespace: int | None = None
+
+
+@dataclass
+class AddressSpaceSpec:
+    """The server of one product: its namespaces and folders instead of DeviceSet/<device>."""
+    namespace: str
+    namespaces: list[str]                   # NamespaceArray from index 1
+    folders: list[FolderSpec] = field(default_factory=list)
 
 
 @dataclass
@@ -78,6 +99,9 @@ class Profile:
     variables: list[VariableSpec] = field(default_factory=list)
     methods: list[MethodSpec] = field(default_factory=list)
     alarms: list[AlarmSpec] = field(default_factory=list)
+    address_space: AddressSpaceSpec | None = None
+    sources: list[str] = field(default_factory=list)
+    limits: list[str] = field(default_factory=list)
 
 
 def _mapping(data: Any, where: str) -> dict[str, Any]:
@@ -105,10 +129,44 @@ def _number(value: Any, where: str) -> float:
     return float(value)
 
 
+def _placement(data: dict[str, Any], where: str) -> dict[str, Any]:
+    node_id = data.get("node_id")
+    if node_id is not None and (isinstance(node_id, bool) or not isinstance(node_id, (str, int))):
+        raise ProfileError(f"{where}: 'node_id' must be a string or a number")
+    path = data.get("path") or []
+    if not isinstance(path, list) or not all(isinstance(item, str) and item for item in path):
+        raise ProfileError(f"{where}: 'path' must be a list of folder names")
+    browse = data.get("browse_namespace")
+    if browse is not None and (isinstance(browse, bool) or not isinstance(browse, int)):
+        raise ProfileError(f"{where}: 'browse_namespace' must be a namespace index")
+    return {"node_id": node_id, "path": path, "browse_namespace": browse}
+
+
+def _address_space(data: Any, where: str) -> AddressSpaceSpec:
+    where = f"{where} address_space"
+    data = _mapping(data, where)
+    _unknown(data, {"namespace", "namespaces", "folders"}, where)
+    namespace, namespaces = data.get("namespace"), data.get("namespaces")
+    if not isinstance(namespaces, list) or not all(isinstance(uri, str) for uri in namespaces) \
+            or len(set(namespaces)) != len(namespaces):
+        raise ProfileError(f"{where}: 'namespaces' must be a list of different URIs from index 1")
+    if namespace not in namespaces:
+        raise ProfileError(f"{where}: 'namespace' must be one of 'namespaces'")
+    folders = []
+    for item in data.get("folders") or []:
+        item = _mapping(item, f"{where} folder")
+        _unknown(item, {"node_id", "path", "browse_namespace"}, f"{where} folder")
+        placed = _placement(item, f"{where} folder")
+        if not placed["path"]:
+            raise ProfileError(f"{where} folder: 'path' is required")
+        folders.append(FolderSpec(**placed))
+    return AddressSpaceSpec(namespace=namespace, namespaces=namespaces, folders=folders)
+
+
 def _variable(data: Any, where: str) -> VariableSpec:
     data = _mapping(data, where)
     _unknown(data, {"name", "type", "description", "unit", "range", "writable", "min", "max",
-                    "model", "source", "value"}, where)
+                    "model", "source", "value", "node_id", "path", "browse_namespace"}, where)
     name = _name(data, where)
     where = f"{where} ({name})"
     vtype = data.get("type", "Double")
@@ -136,7 +194,7 @@ def _variable(data: Any, where: str) -> VariableSpec:
     return VariableSpec(name=name, type=vtype, description=str(data.get("description", "")),
                         unit=data.get("unit"), range=span, writable=bool(data.get("writable")),
                         min=low, max=high, model=data.get("model"), source=source,
-                        value=data.get("value"))
+                        value=data.get("value"), **_placement(data, where))
 
 
 def _arguments(items: Any, where: str) -> list[ArgumentSpec]:
@@ -153,13 +211,15 @@ def _arguments(items: Any, where: str) -> list[ArgumentSpec]:
 
 def _method(data: Any, where: str) -> MethodSpec:
     data = _mapping(data, where)
-    _unknown(data, {"name", "model", "description", "inputs", "outputs"}, where)
+    _unknown(data, {"name", "model", "description", "inputs", "outputs", "node_id", "path",
+                    "browse_namespace"}, where)
     name = _name(data, where)
     if not isinstance(data.get("model"), str):
         raise ProfileError(f"{where} ({name}): 'model' (the model method) is required")
     return MethodSpec(name=name, model=data["model"], description=str(data.get("description", "")),
                       inputs=_arguments(data.get("inputs"), f"{where} ({name}) inputs"),
-                      outputs=_arguments(data.get("outputs"), f"{where} ({name}) outputs"))
+                      outputs=_arguments(data.get("outputs"), f"{where} ({name}) outputs"),
+                      **_placement(data, f"{where} ({name})"))
 
 
 def _alarm(data: Any, where: str, variables: dict[str, VariableSpec]) -> AlarmSpec:
@@ -214,7 +274,7 @@ def parse_profile(data: Any, where: str = "profile") -> Profile:
     """Validate a profile mapping and return it as a :class:`Profile`."""
     data = _mapping(data, where)
     _unknown(data, {"name", "description", "identification", "model", "model_params", "variables",
-                    "methods", "alarms"}, where)
+                    "methods", "alarms", "address_space", "sources", "limits"}, where)
     name = data.get("name")
     if not isinstance(name, str) or not name:
         raise ProfileError(f"{where}: 'name' is required")
@@ -253,10 +313,29 @@ def parse_profile(data: Any, where: str = "profile") -> Profile:
     for alarm in alarms:
         if alarm.when is not None and (model_class is None or alarm.when not in model_class.FLAGS):
             raise ProfileError(f"{where}: alarm {alarm.name}: no model flag {alarm.when!r}")
+    address_space = None
+    if data.get("address_space") is not None:
+        address_space = _address_space(data["address_space"], where)
+        if alarms:
+            raise ProfileError(f"{where}: a profile with an address_space cannot have alarms yet")
+        seen: set[str | int] = set()
+        for item in [*variables, *methods]:
+            if item.node_id is None or not item.path:
+                raise ProfileError(f"{where}: {item.name} needs 'node_id' and 'path'")
+            if item.node_id in seen:
+                raise ProfileError(f"{where}: duplicate node_id {item.node_id!r}")
+            seen.add(item.node_id)
+    else:
+        for item in [*variables, *methods]:
+            if item.node_id is not None or item.path or item.browse_namespace is not None:
+                raise ProfileError(f"{where}: {item.name}: 'node_id', 'path' and "
+                                   "'browse_namespace' need an address_space")
     return Profile(name=name, description=str(data.get("description", "")),
                    identification={key: str(value) for key, value in identification.items()},
                    model=model, model_params=model_params, variables=variables, methods=methods,
-                   alarms=alarms)
+                   alarms=alarms, address_space=address_space,
+                   sources=[str(item) for item in data.get("sources") or []],
+                   limits=[str(item) for item in data.get("limits") or []])
 
 
 def bundled_profiles() -> list[str]:

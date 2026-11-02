@@ -1,0 +1,68 @@
+# CODESYS Control runtime OPC UA server, also used by many other PLC brands: |var| node IDs
+# The variables are an example program; only the way the server presents them follows the sources.
+name: codesys-control
+description: "CODESYS Control runtime OPC UA server, also used by many other PLC brands: |var| node IDs"
+identification:
+  manufacturer: CODESYS (simulated)
+  model: CODESYS Control layout
+model: plc_machine
+address_space:
+  namespace: urn:opcua-sim:placeholder:codesys
+  namespaces:
+    - urn:opcua-sim:server
+    - urn:opcua-sim:reserved:2
+    - urn:opcua-sim:reserved:3
+    - urn:opcua-sim:placeholder:codesys
+variables:
+  - name: Run
+    node_id: '|var|CODESYS Control for Linux SL.Application.PLC_PRG.bRun'
+    path: ['CODESYS Control for Linux SL', 'Application', 'PLC_PRG']
+    type: Boolean
+    model: run
+    writable: true
+  - name: Reset
+    node_id: '|var|CODESYS Control for Linux SL.Application.PLC_PRG.bReset'
+    path: ['CODESYS Control for Linux SL', 'Application', 'PLC_PRG']
+    type: Boolean
+    model: reset
+    writable: true
+  - name: SpeedSetpoint
+    node_id: '|var|CODESYS Control for Linux SL.Application.PLC_PRG.rSpeedSetpoint'
+    path: ['CODESYS Control for Linux SL', 'Application', 'PLC_PRG']
+    type: Float
+    model: speed_setpoint
+    writable: true
+    min: 0
+    max: 1500
+  - name: Speed
+    node_id: '|var|CODESYS Control for Linux SL.Application.PLC_PRG.rSpeed'
+    path: ['CODESYS Control for Linux SL', 'Application', 'PLC_PRG']
+    type: Float
+    model: speed
+  - name: Temperature
+    node_id: '|var|CODESYS Control for Linux SL.Application.PLC_PRG.rTemperature'
+    path: ['CODESYS Control for Linux SL', 'Application', 'PLC_PRG']
+    type: Float
+    model: temperature
+  - name: Parts
+    node_id: '|var|CODESYS Control for Linux SL.Application.PLC_PRG.diParts'
+    path: ['CODESYS Control for Linux SL', 'Application', 'PLC_PRG']
+    type: Int32
+    model: parts
+  - name: Fault
+    node_id: '|var|CODESYS Control for Linux SL.Application.PLC_PRG.bFault'
+    path: ['CODESYS Control for Linux SL', 'Application', 'PLC_PRG']
+    type: Boolean
+    model: fault
+  - name: FaultCode
+    node_id: '|var|CODESYS Control for Linux SL.Application.PLC_PRG.iFaultCode'
+    path: ['CODESYS Control for Linux SL', 'Application', 'PLC_PRG']
+    type: Int16
+    model: fault_code
+sources:
+  - 'CODESYS Forge forum: node IDs like ns=4;s=|var|Raspberry Pi.Application.PLC_PRG.IrSpeed. This is user reports, not vendor documentation'
+limits:
+  - 'Weakest of the PLC profiles: no vendor document was found for the address space'
+  - The namespace URI is a placeholder, so code that looks up the real CODESYS URI will not find it
+  - The folder names are assumptions
+  - Not checked against a real runtime

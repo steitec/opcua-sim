@@ -1,0 +1,78 @@
+# Omron NJ/NX CPU unit OPC UA server: address tree and types from manual W588
+# The variables are an example program; only the way the server presents them follows the sources.
+name: omron-nx
+description: "Omron NJ/NX CPU unit OPC UA server: address tree and types from manual W588"
+identification:
+  manufacturer: Omron (simulated)
+  model: NJ/NX server layout
+model: plc_machine
+address_space:
+  namespace: urn:opcua-sim:placeholder:omron
+  namespaces:
+    - urn:opcua-sim:server
+    - urn:opcua-sim:placeholder:omron
+variables:
+  - name: Run
+    node_id: 'new_Controller_0.GlobalVars.Run'
+    path: ['new_Controller_0', 'GlobalVars']
+    type: Boolean
+    model: run
+    writable: true
+  - name: Reset
+    node_id: 'new_Controller_0.GlobalVars.Reset'
+    path: ['new_Controller_0', 'GlobalVars']
+    type: Boolean
+    model: reset
+    writable: true
+  - name: SpeedSetpoint
+    node_id: 'new_Controller_0.GlobalVars.SpeedSetpoint'
+    path: ['new_Controller_0', 'GlobalVars']
+    type: Float
+    model: speed_setpoint
+    writable: true
+    min: 0
+    max: 1500
+  - name: Speed
+    node_id: 'new_Controller_0.GlobalVars.Speed'
+    path: ['new_Controller_0', 'GlobalVars']
+    type: Float
+    model: speed
+  - name: Temperature
+    node_id: 'new_Controller_0.GlobalVars.Temperature'
+    path: ['new_Controller_0', 'GlobalVars']
+    type: Float
+    model: temperature
+  - name: Parts
+    node_id: 'new_Controller_0.GlobalVars.Parts'
+    path: ['new_Controller_0', 'GlobalVars']
+    type: Int32
+    model: parts
+  - name: Fault
+    node_id: 'new_Controller_0.GlobalVars.Fault'
+    path: ['new_Controller_0', 'GlobalVars']
+    type: Boolean
+    model: fault
+  - name: FaultCode
+    node_id: 'new_Controller_0.GlobalVars.FaultCode'
+    path: ['new_Controller_0', 'GlobalVars']
+    type: Int16
+    model: fault_code
+  - name: Mode
+    node_id: 'new_Controller_0.DeviceStatus.Mode'
+    path: ['new_Controller_0', 'DeviceStatus']
+    type: String
+    model: mode_text
+    description: "RUN or PROGRAM"
+  - name: ErrorStatus
+    node_id: 'new_Controller_0.DeviceStatus.ErrorStatus'
+    path: ['new_Controller_0', 'DeviceStatus']
+    type: String
+    model: error_text
+    description: "NoError, MajorFault or ContinuousError"
+sources:
+  - 'Omron W588 NJ/NX-series CPU Unit OPC UA User Manual: tree new_Controller_0 with DeviceStatus, GlobalVars and Programs, data type table, endpoint on port 4840, security defaults'
+limits:
+  - Not checked against a real CPU
+  - 'The manual shows the tree but no namespace URI or node ID strings, so both are placeholders here: browse, as the manual does'
+  - 'Real defaults: anonymous login prohibited, security policy starts at Sign. Set security and users in your bench to match'
+  - The manual says ErrorStatus in the tree and ErrorState in the table; the data type of the status nodes is not stated, String is an assumption

@@ -33,6 +33,12 @@ def variant_type(name: str) -> ua.VariantType:
     return getattr(ua.VariantType, name)
 
 
+def variant(value: Any, type_name: str) -> ua.Variant:
+    if type_name == "LocalizedText":
+        return ua.Variant(ua.LocalizedText(value), ua.VariantType.LocalizedText)
+    return ua.Variant(value, variant_type(type_name))
+
+
 def _status(name: str | None) -> ua.StatusCode:
     return ua.StatusCode(status_code(name)) if name else ua.StatusCode()
 
@@ -73,6 +79,7 @@ class UaServer:
         self.conditions: dict[ua.NodeId, tuple[Device, Alarm]] = {}
         self.device_nodes: dict[str, ua.NodeId] = {}
         self.published: dict[ua.NodeId, Any] = {}
+        self.folders: dict[tuple[str, ...], Any] = {}
 
     async def start(self) -> int:
         """Start listening on a private loopback port and return it."""
@@ -94,18 +101,11 @@ class UaServer:
         if self.certificate is not None:
             await server.load_certificate(str(self.certificate[0]))
             await server.load_private_key(str(self.certificate[1]))
-        self.idx = await server.register_namespace(NAMESPACE)
-        health_type = await new_enum(server, self.idx, "DeviceHealthEnumeration", list(HEALTH))
-        # DataTypeDefinition alone is OPC UA 1.04; many clients still look for EnumStrings.
-        await health_type.add_property(
-            ua.NodeId("DeviceHealthEnumeration.EnumStrings", self.idx),
-            ua.QualifiedName("EnumStrings", 0), [ua.LocalizedText(text) for text in HEALTH],
-            ua.VariantType.LocalizedText)
-        self.health_type = health_type.nodeid
-        device_set = await server.nodes.objects.add_folder(ua.NodeId("DeviceSet", self.idx),
-                                                           ua.QualifiedName("DeviceSet", self.idx))
-        for device in self.devices.values():
-            await self._add_device(device_set, device)
+        product = next((d for d in self.devices.values() if d.profile.address_space), None)
+        if product is not None:
+            await self._add_product(product)
+        else:
+            await self._add_device_set()
         self._hook_writes()
         server.link_method(server.get_node(ua.ObjectIds.AcknowledgeableConditionType_Acknowledge),
                            self._acknowledge)
@@ -119,6 +119,65 @@ class UaServer:
         await self.server.stop()
 
     # -- address space ---------------------------------------------------------------------
+
+    async def _add_device_set(self) -> None:
+        server = self.server
+        self.idx = await server.register_namespace(NAMESPACE)
+        health_type = await new_enum(server, self.idx, "DeviceHealthEnumeration", list(HEALTH))
+        # DataTypeDefinition alone is OPC UA 1.04; many clients still look for EnumStrings.
+        await health_type.add_property(
+            ua.NodeId("DeviceHealthEnumeration.EnumStrings", self.idx),
+            ua.QualifiedName("EnumStrings", 0), [ua.LocalizedText(text) for text in HEALTH],
+            ua.VariantType.LocalizedText)
+        self.health_type = health_type.nodeid
+        device_set = await server.nodes.objects.add_folder(ua.NodeId("DeviceSet", self.idx),
+                                                           ua.QualifiedName("DeviceSet", self.idx))
+        for device in self.devices.values():
+            await self._add_device(device_set, device)
+
+    async def _add_product(self, device: Device) -> None:
+        """Lay the nodes out like the product does: its namespaces, folders and node IDs."""
+        space = device.profile.address_space
+        array = self.server.get_node(ua.ObjectIds.Server_NamespaceArray)
+        await array.write_value(ua.DataValue(ua.Variant(
+            ["http://opcfoundation.org/UA/", *space.namespaces], ua.VariantType.String,
+            Dimensions=None)))
+        self.idx = space.namespaces.index(space.namespace) + 1
+        for folder in space.folders:
+            await self._folder(tuple(folder.path), folder.node_id, folder.browse_namespace)
+        for spec in device.variables.values():
+            await self._add_variable(await self._folder(tuple(spec.path)), device, spec)
+            # A manual may list variables below a variable: later paths can go through this one.
+            self.folders[(*spec.path, spec.name)] = self.server.get_node(
+                ua.NodeId(spec.node_id, self.idx))
+        for method in device.methods.values():
+            await self._add_method(await self._folder(tuple(method.path)), device, method)
+
+    async def _folder(self, path: tuple[str, ...], node_id: str | int | None = None,
+                      browse_namespace: int | None = None) -> Any:
+        if path in self.folders:
+            return self.folders[path]
+        if len(path) == 1:
+            parent = self.server.nodes.objects
+        else:
+            parent = await self._folder(path[:-1])
+        identifier = ".".join(path) if node_id is None else node_id
+        created = await parent.add_object(
+            ua.NodeId(identifier, self.idx),
+            ua.QualifiedName(path[-1], self.idx if browse_namespace is None else browse_namespace))
+        self.folders[path] = created
+        return created
+
+    async def _add_method(self, parent: Any, device: Device, method: Any) -> None:
+        identifier = f"{device.name}.{method.name}" if method.node_id is None else method.node_id
+        browse = self.idx if method.browse_namespace is None else method.browse_namespace
+        created = await parent.add_method(
+            ua.NodeId(identifier, self.idx), ua.QualifiedName(method.name, browse),
+            self._method(device, method.name),
+            [_argument(arg) for arg in method.inputs], [_argument(arg) for arg in method.outputs])
+        if method.description:
+            await created.write_attribute(ua.AttributeIds.Description, ua.DataValue(
+                ua.Variant(ua.LocalizedText(method.description))))
 
     async def _add_device(self, parent: Any, device: Device) -> None:
         idx = self.idx
@@ -147,14 +206,7 @@ class UaServer:
             methods = await node.add_object(ua.NodeId(f"{name}.MethodSet", idx),
                                             ua.QualifiedName("MethodSet", idx))
             for method in device.methods.values():
-                created = await methods.add_method(
-                    ua.NodeId(f"{name}.{method.name}", idx),
-                    ua.QualifiedName(method.name, idx), self._method(device, method.name),
-                    [_argument(arg) for arg in method.inputs],
-                    [_argument(arg) for arg in method.outputs])
-                if method.description:
-                    await created.write_attribute(ua.AttributeIds.Description, ua.DataValue(
-                        ua.Variant(ua.LocalizedText(method.description))))
+                await self._add_method(methods, device, method)
         if device.alarms:
             alarms = await node.add_object(ua.NodeId(f"{name}.Alarms", idx),
                                            ua.QualifiedName("Alarms", idx))
@@ -166,9 +218,12 @@ class UaServer:
 
     async def _add_variable(self, parent: Any, device: Device, spec: VariableSpec) -> None:
         idx = self.idx
-        nodeid = ua.NodeId(f"{device.name}.{spec.name}", idx)
-        qname = ua.QualifiedName(spec.name, idx)
+        identifier = f"{device.name}.{spec.name}" if spec.node_id is None else spec.node_id
+        nodeid = ua.NodeId(identifier, idx)
+        qname = ua.QualifiedName(spec.name, idx if spec.browse_namespace is None
+                                 else spec.browse_namespace)
         vtype = variant_type(spec.type)
+        initial = variant(device.samples[spec.name].value, spec.type)
         if spec.unit is not None or spec.range is not None:
             created = await instantiate(parent, self.server.get_node(ua.ObjectIds.AnalogItemType),
                                         nodeid=nodeid, bname=qname,
@@ -178,19 +233,19 @@ class UaServer:
             await node.write_attribute(ua.AttributeIds.DataType,
                                        ua.DataValue(ua.Variant(ua.NodeId(vtype.value),
                                                                ua.VariantType.NodeId)))
-            await node.write_value(ua.DataValue(ua.Variant(device.samples[spec.name].value, vtype)))
+            await node.write_value(ua.DataValue(initial))
             low, high = spec.range if spec.range else (float("-inf"), float("inf"))
             eu_range = await node.get_child("EURange")
             await eu_range.write_value(ua.DataValue(ua.Variant(ua.Range(low, high))))
             if spec.unit is not None:
                 await node.add_property(
-                    ua.NodeId(f"{device.name}.{spec.name}.EngineeringUnits", idx),
+                    ua.NodeId(f"{identifier}.EngineeringUnits", idx),
                     ua.QualifiedName("EngineeringUnits", 0),
                     ua.EUInformation(DisplayName=ua.LocalizedText(spec.unit),
                                      Description=ua.LocalizedText(spec.unit)),
                     ua.VariantType.ExtensionObject)
         else:
-            node = await parent.add_variable(nodeid, qname, device.samples[spec.name].value, vtype)
+            node = await parent.add_variable(nodeid, qname, initial.Value, vtype)
         if spec.writable:
             await node.set_writable()
         if spec.description:
@@ -225,10 +280,10 @@ class UaServer:
             self.published[nodeid] = key
             spec = device.variables[name]
             bad = bool(sample.status) and sample.status.startswith("Bad")
-            variant = ua.Variant(None, ua.VariantType.Null) if bad else \
-                ua.Variant(sample.value, variant_type(spec.type))
+            published = ua.Variant(None, ua.VariantType.Null) if bad else \
+                variant(sample.value, spec.type)
             await server.write_attribute_value(nodeid, ua.DataValue(
-                variant, StatusCode=_status(sample.status), SourceTimestamp=sample.timestamp,
+                published, StatusCode=_status(sample.status), SourceTimestamp=sample.timestamp,
                 ServerTimestamp=datetime.now(timezone.utc)))
         for name, nodeid in self.health_nodes.items():
             value = HEALTH.index(self.devices[name].health)
@@ -373,7 +428,10 @@ class UaServer:
             return ua.StatusCode(ua.StatusCodes.BadTypeMismatch)
         if spec.writable and not self._may_write(user):
             return ua.StatusCode(ua.StatusCodes.BadUserAccessDenied)
-        return _status(device.write(name, value.Value.Value))
+        written = value.Value.Value
+        if isinstance(written, ua.LocalizedText):
+            written = written.Text or ""
+        return _status(device.write(name, written))
 
     def _method(self, device: Device, name: str) -> Any:
         spec = device.methods[name]

@@ -16,3 +16,6 @@ First version.
   and refused connections, server state, service level, restart)
 - Security modes None, Sign and SignAndEncrypt (Basic256Sha256), user names with read-only users
 - Command line, JSON control channel, pytest plugin
+- Six profiles that present a simulated device the way a real product does, each naming its
+  sources and limits: Siemens S7-1500, Beckhoff TwinCAT 3, Phoenix Contact PLCnext, CODESYS,
+  Omron NJ/NX, Leuze BCL 300

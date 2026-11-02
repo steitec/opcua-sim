@@ -10,7 +10,7 @@ def base(**extra):
     return {"name": "p", "variables": [{"name": "V"}], **extra}
 
 
-def test_bundled_profiles_all_load():
+def test_bundled_profiles_all_load():  # includes real-product layouts
     names = bundled_profiles()
     assert {"drive", "energy-meter", "generic-sensor", "pressure-transmitter",
             "temperature-controller"} <= set(names)

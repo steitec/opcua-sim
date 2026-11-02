@@ -1,0 +1,68 @@
+# Siemens S7-1500 built-in OPC UA server: symbolic node IDs with quotes, as a client meets them
+# The variables are an example program; only the way the server presents them follows the sources.
+name: siemens-s7-1500
+description: "Siemens S7-1500 built-in OPC UA server: symbolic node IDs with quotes, as a client meets them"
+identification:
+  manufacturer: Siemens (simulated)
+  model: S7-1500 server layout
+model: plc_machine
+address_space:
+  namespace: http://www.siemens.com/simatic-s7-opcua
+  namespaces:
+    - urn:opcua-sim:server
+    - urn:opcua-sim:reserved:2
+    - http://www.siemens.com/simatic-s7-opcua
+variables:
+  - name: Run
+    node_id: '"DB_Line"."Run"'
+    path: ['PLC_1', 'DataBlocksGlobal', 'DB_Line']
+    type: Boolean
+    model: run
+    writable: true
+  - name: Reset
+    node_id: '"DB_Line"."Reset"'
+    path: ['PLC_1', 'DataBlocksGlobal', 'DB_Line']
+    type: Boolean
+    model: reset
+    writable: true
+  - name: SpeedSetpoint
+    node_id: '"DB_Line"."SpeedSetpoint"'
+    path: ['PLC_1', 'DataBlocksGlobal', 'DB_Line']
+    type: Float
+    model: speed_setpoint
+    writable: true
+    min: 0
+    max: 1500
+  - name: Speed
+    node_id: '"DB_Line"."Speed"'
+    path: ['PLC_1', 'DataBlocksGlobal', 'DB_Line']
+    type: Float
+    model: speed
+  - name: Temperature
+    node_id: '"DB_Line"."Temperature"'
+    path: ['PLC_1', 'DataBlocksGlobal', 'DB_Line']
+    type: Float
+    model: temperature
+  - name: Parts
+    node_id: '"DB_Line"."Parts"'
+    path: ['PLC_1', 'DataBlocksGlobal', 'DB_Line']
+    type: Int32
+    model: parts
+  - name: Fault
+    node_id: '"DB_Line"."Fault"'
+    path: ['PLC_1', 'DataBlocksGlobal', 'DB_Line']
+    type: Boolean
+    model: fault
+  - name: FaultCode
+    node_id: '"DB_Line"."FaultCode"'
+    path: ['PLC_1', 'DataBlocksGlobal', 'DB_Line']
+    type: Int16
+    model: fault_code
+sources:
+  - 'Siemens entry 109737901 (OPC UA .NET client for S7-1500), section 3: node ID form ns=3;s="DataStatic"."myBool", namespaces can change'
+  - 'Third-party guides, not Siemens: namespace URI, folder path PLC_1/DataBlocksGlobal, type mapping (blanpa.github.io, opclabs.com forum)'
+limits:
+  - Not checked against a real CPU
+  - The folder path and URI come from third parties; the Siemens function manual was not available
+  - Index 2 of the namespace array is a placeholder
+  - The server is off by default on a real CPU, and its security is set in TIA Portal

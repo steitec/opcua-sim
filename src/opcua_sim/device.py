@@ -16,14 +16,14 @@ from .signals import make_source
 _INT_RANGES = {"Byte": (0, 255), "Int16": (-2**15, 2**15 - 1), "UInt16": (0, 2**16 - 1),
                "Int32": (-2**31, 2**31 - 1), "UInt32": (0, 2**32 - 1),
                "Int64": (-2**63, 2**63 - 1), "UInt64": (0, 2**64 - 1)}
-_ZERO = {"Boolean": False, "String": ""}
+_ZERO = {"Boolean": False, "String": "", "LocalizedText": ""}
 
 
 def coerce(value: Any, vtype: str) -> Any:
     """Fit a Python value into an OPC UA built-in type."""
     if vtype == "Boolean":
         return bool(value)
-    if vtype == "String":
+    if vtype in ("String", "LocalizedText"):
         return "" if value is None else str(value)
     number = float(value)
     if vtype in _INT_RANGES:

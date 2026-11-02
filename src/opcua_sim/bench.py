@@ -37,6 +37,9 @@ class Bench:
             raise BenchError("device names must be unique")
         if SERVER_TARGET in by_name:
             raise BenchError(f"{SERVER_TARGET!r} is reserved, call the device something else")
+        if len(devices) > 1 and any(d.profile.address_space for d in devices):
+            raise BenchError("a profile of a real product is a whole server: it must be the "
+                             "only device of its bench")
         security = list(security or ["none"])
         for level in security:
             if level not in SECURITY:

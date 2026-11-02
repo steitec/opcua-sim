@@ -76,15 +76,26 @@ def cmd_profiles(args: argparse.Namespace) -> int:
 
 def cmd_map(args: argparse.Namespace) -> int:
     profile = load_profile(args.profile)
-    print(f"{profile.name}: {profile.description}\n\nVariables (under ParameterSet)")
+    space = profile.address_space
+    print(f"{profile.name}: {profile.description}")
+    if space:
+        index = space.namespaces.index(space.namespace) + 1
+        print(f"\nNamespace [{index}] {space.namespace}")
+    print(f"\nVariables{'' if space else ' (under ParameterSet)'}")
     for var in profile.variables:
         access = "rw" if var.writable else "r "
         unit = f" [{var.unit}]" if var.unit else ""
         text = f"  {var.description}" if var.description else ""
         print(f"  {access} {var.name:20} {var.type:8}{unit}{text}")
+        if space:
+            kind = "i" if isinstance(var.node_id, int) else "s"
+            print(f"       ns={index};{kind}={var.node_id}   {'/'.join(var.path)}")
     if profile.methods:
-        print("\nMethods (under MethodSet)")
+        print(f"\nMethods{'' if space else ' (under MethodSet)'}")
         for method in profile.methods:
+            if space:
+                kind = "i" if isinstance(method.node_id, int) else "s"
+                print(f"  ns={index};{kind}={method.node_id}   {'/'.join(method.path)}")
             inputs = ", ".join(f"{a.name}: {a.type}" for a in method.inputs)
             outputs = ", ".join(f"{a.name}: {a.type}" for a in method.outputs)
             arrow = f" -> {outputs}" if outputs else ""
@@ -97,13 +108,23 @@ def cmd_map(args: argparse.Namespace) -> int:
                 print(f"  {alarm.name:20} level on {alarm.variable}: {limits}")
             else:
                 print(f"  {alarm.name:20} discrete, severity {alarm.severity}: {alarm.message}")
+    for title, lines in (("Sources", profile.sources), ("Limits", profile.limits)):
+        if lines:
+            print(f"\n{title}")
+            for line in lines:
+                print(f"  - {line}")
     return 0
 
 
 async def _node_id(client: Client, name: str) -> ua.NodeId:
     if name.startswith(("ns=", "i=", "s=", "g=", "b=")):
         return ua.NodeId.from_string(name)
-    return ua.NodeId(name, await client.get_namespace_index(NAMESPACE))
+    try:
+        index = await client.get_namespace_index(NAMESPACE)
+    except ValueError:
+        raise FaultError(f"{name}: this server has its own node IDs, use the full form, "
+                         "e.g. 'ns=3;s=...' (see opcua-sim browse)") from None
+    return ua.NodeId(name, index)
 
 
 def _show(value: ua.DataValue) -> str:
@@ -124,6 +145,8 @@ def _client(args: argparse.Namespace) -> Client:
 
 async def _browse(node: Any, depth: int, indent: int) -> None:
     for child in await node.get_children():
+        if child.nodeid == ua.NodeId(ua.ObjectIds.Server):
+            continue
         name = (await child.read_browse_name()).Name
         node_class = await child.read_node_class()
         print(f"{' ' * indent}{name}  ({node_class.name}, {child.nodeid.to_string()})")
@@ -133,7 +156,12 @@ async def _browse(node: Any, depth: int, indent: int) -> None:
 
 async def _a_browse(args: argparse.Namespace) -> int:
     async with _client(args) as client:
-        start = client.get_node(await _node_id(client, args.node or "DeviceSet"))
+        if args.node:
+            start = client.get_node(await _node_id(client, args.node))
+        elif NAMESPACE in await client.get_namespace_array():
+            start = client.get_node(await _node_id(client, "DeviceSet"))
+        else:
+            start = client.nodes.objects
         await _browse(start, args.depth, 0)
     return 0
 
@@ -166,10 +194,13 @@ async def _a_write(args: argparse.Namespace) -> int:
 
 async def _a_call(args: argparse.Namespace) -> int:
     async with _client(args) as client:
-        device, _, _method = args.method.rpartition(".")
-        if not device:
-            raise FaultError("method must be device.Method")
-        parent = client.get_node(await _node_id(client, f"{device}.MethodSet"))
+        if args.object:
+            parent = client.get_node(await _node_id(client, args.object))
+        else:
+            device, _, _method = args.method.rpartition(".")
+            if not device or args.method.startswith("ns="):
+                raise FaultError("method must be device.Method, or use --object with a node ID")
+            parent = client.get_node(await _node_id(client, f"{device}.MethodSet"))
         node = client.get_node(await _node_id(client, args.method))
         result = await parent.call_method(node, *[_value(a) for a in args.arguments])
         print(f"{args.method}: {'ok' if result is None else result}")
@@ -293,6 +324,7 @@ def parser() -> argparse.ArgumentParser:
     call = commands.add_parser("call", help="call a method, e.g. pump.Start")
     call.add_argument("method")
     call.add_argument("arguments", nargs="*")
+    call.add_argument("--object", help="node ID of the method's object, for real-product profiles")
     client_options(call)
     call.set_defaults(run=lambda a: asyncio.run(_a_call(a)))
     watch = commands.add_parser("watch", help="subscribe to variables and alarms")

@@ -1,0 +1,48 @@
+# Leuze BCL 300 bar code reader: node IDs, browse names and types from the manufacturer's table.
+name: leuze-bcl300
+description: Leuze BCL 300 bar code reader, numeric node IDs from the manufacturer's OPC UA description
+identification:
+  manufacturer: Leuze electronic (simulated)
+  model: BCL 300
+model: barcode_reader
+address_space:
+  namespace: http://leuze.com/OpcUa/BCL300/
+  namespaces:
+    - http://opcfoundation.org/UA/DI/
+    - http://opcfoundation.org/UA/AutoID/
+    - http://leuze.com/OpcUa/
+    - http://leuze.com/OpcUa/BCL300/
+  folders:
+    - {path: [BCL300, AutoID], node_id: 5001, browse_namespace: 4}
+    - {path: [BCL300, FunctionalUnits], node_id: 5015, browse_namespace: 3}
+    - {path: [BCL300, FunctionalUnits, Reset], node_id: 5035, browse_namespace: 3}
+    - {path: [BCL300, StatisticSet], node_id: 5006, browse_namespace: 3}
+    - {path: [BCL300, StatisticSet, ReadingGate], node_id: 5008, browse_namespace: 3}
+variables:
+  - {name: DeviceManual, node_id: 6067, path: [BCL300], browse_namespace: 1, type: String, value: "simulated device, no manual"}
+  - {name: Manufacturer, node_id: 6070, path: [BCL300], browse_namespace: 1, type: LocalizedText, value: "Leuze electronic (simulated)"}
+  - {name: Model, node_id: 6071, path: [BCL300], browse_namespace: 1, type: LocalizedText, value: "BCL 300"}
+  - {name: SerialNumber, node_id: 6073, path: [BCL300], browse_namespace: 1, type: String, value: "SIM-000001"}
+  - {name: DeviceStatus, node_id: 6006, path: [BCL300, AutoID], browse_namespace: 2, type: Int32, model: device_status,
+     description: "0 idle, 1 error, 2 scanning, 3 busy"}
+  - {name: LastScanData, node_id: 6205, path: [BCL300, AutoID], browse_namespace: 2, type: String, model: last_scan_data}
+  - {name: ScanActive, node_id: 6202, path: [BCL300, AutoID], browse_namespace: 2, type: Boolean, model: scan_active, writable: true,
+     description: "activates or deactivates scanning"}
+  - {name: DeviceTemperature, node_id: 6027, path: [BCL300, StatisticSet], browse_namespace: 3, type: Float, unit: degC, model: temperature}
+  - {name: CountSinceDelivery, node_id: 6039, path: [BCL300, StatisticSet, ReadingGate], browse_namespace: 3, type: Int64, model: total}
+  - {name: NotOk, node_id: 6042, path: [BCL300, StatisticSet, ReadingGate, CountSinceDelivery], browse_namespace: 3, type: Int64, model: not_ok}
+  - {name: Ok, node_id: 6043, path: [BCL300, StatisticSet, ReadingGate, CountSinceDelivery], browse_namespace: 3, type: Int64, model: ok}
+  - {name: Portion, node_id: 6044, path: [BCL300, StatisticSet, ReadingGate, CountSinceDelivery], browse_namespace: 3, type: UInt32, model: portion,
+     description: "share of good reads; the manual does not state the scale, percent is an assumption"}
+methods:
+  - {name: ScanStop, model: scan_stop, node_id: 7002, path: [BCL300, AutoID], browse_namespace: 2}
+  - {name: ResetDevice, model: reset, node_id: 7009, path: [BCL300, FunctionalUnits, Reset], browse_namespace: 3,
+     description: "the simulation also clears the counters and starts scanning"}
+sources:
+  - 'Leuze OPC-UA technical description 50141930 (2019-03-19), chapter 4: namespaces, node IDs, browse names and data types'
+  - 'OPC 30010 AutoID 1.01, reference.opcfoundation.org: DeviceStatusEnumeration values'
+limits:
+  - A part of the manual's table, 19 of the 136 nodes it lists for the BCL 300. Everything here keeps the published node ID
+  - ScanStart and Scan are missing, they need the AutoID ScanSettings structure. The DI and AutoID namespaces exist only as URIs, without their types
+  - DeviceStatus is Int32 here, not DeviceStatusEnumeration. The name of the root object, the writability of ScanActive and the scale of Portion are not in the manual
+  - The reader starts scanning by itself. Not checked against a real reader or its firmware

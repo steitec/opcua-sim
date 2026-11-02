@@ -61,10 +61,13 @@ underneath is [asyncua](https://github.com/FreeOpcUa/opcua-asyncio).
 
 ## What it is not
 
-The bundled profiles are **generic devices**. None of them reproduces the address space of a
-real product. The node structure borrows the names of OPC UA DI (`DeviceSet`, `ParameterSet`,
-`MethodSet`, `DeviceHealth`), but lives in its own namespace and does not implement the DI
-companion specification: a client that looks for the DI types will not find them.
+The generic profiles use the names of OPC UA DI (`DeviceSet`, `ParameterSet`, `MethodSet`,
+`DeviceHealth`), but live in their own namespace and do not implement the DI companion
+specification: a client that looks for the DI types will not find them.
+
+The [product profiles](#product-profiles) copy how a real server presents its nodes, as far as
+public sources describe it. None of them is a complete copy of a product, and none has been
+compared with real hardware.
 
 It is checked with asyncua and node-opcua clients. It has not been tested against UaExpert,
 commercial SCADA systems or a conformance test tool. Please
@@ -145,6 +148,42 @@ Level alarms know `high_high`, `high`, `low` and `low_low`, by default with seve
 outer and 700 for the inner limits; `high: {value: 115, severity: 800}` changes that. Discrete
 alarms (`kind: discrete`, `when: <flag>`) follow a flag of a device model. A value without a
 valid status does not change the state of its level alarm.
+
+## Product profiles
+
+These profiles make the simulated server look like a real product to your client: same namespace
+URIs and indices, same form of node IDs, same data types. A PLC server publishes whatever program
+runs on it, so the variables are one small example program (run and reset bits, a ramp, a part
+counter, a latching fault), presented the way each server would. That is what tests the parts
+that break when you move between brands: quotes in Siemens IDs, the `|var|` of CODESYS, a namespace
+index that differs per server.
+
+| Profile | Example node ID | Based on | Assumed or missing |
+|---|---|---|---|
+| `siemens-s7-1500` | `ns=3;s="DB_Line"."Speed"` | Siemens application document 109737901 for the ID form, third-party guides for the URI and folders | folders and URI not confirmed by Siemens |
+| `beckhoff-twincat3` | `ns=4;s=MAIN.fSpeed` | Beckhoff Information System for the URI, a Cybus guide for the IDs | real defaults are stricter: encrypted only, no anonymous access |
+| `phoenix-plcnext` | `ns=2;s=Arp.Plc.Eclr/MainInstance.rSpeed` | PLCnext documentation for the URI and ID form | namespace index, folders |
+| `omron-nx` | `ns=2;s=new_Controller_0.GlobalVars.Speed` | Omron manual W588 for the tree, types and status nodes | manual gives no URI or ID strings: **placeholders**, so browse |
+| `codesys-control` | `ns=4;s=\|var\|CODESYS Control for Linux SL.Application.PLC_PRG.rSpeed` | forum reports only | URI is a **placeholder**, folders; the weakest of the six |
+| `leuze-bcl300` | `ns=4;i=6205` | Leuze technical description 50141930 | 19 of the 136 listed nodes; no `ScanStart`, `Scan` |
+
+`leuze-bcl300` is the one real device in the list: a bar code reader that scans by itself, with
+node IDs, browse names and types from the manufacturer's table. Rockwell, Mitsubishi and gateways
+such as KEPServerEX are not included, because the sources found were not good enough to copy them.
+
+`opcua-sim map <profile>` prints every node ID with the sources and limits of that profile. These
+profiles have no alarms and no `DeviceHealth` node, and a product profile must be the only device
+of its bench, because it is a whole server. Their own faults are `trip` and `plc_stop` on the PLCs
+and `read_fail` and `device_error` on the reader; every other fault works as usual.
+
+```console
+$ opcua-sim serve --profile siemens-s7-1500 --name plc &
+$ opcua-sim write 'ns=3;s="DB_Line"."Run"' true
+$ opcua-sim inject plc trip code=12
+$ opcua-sim read 'ns=3;s="DB_Line"."Fault"' 'ns=3;s="DB_Line"."FaultCode"'
+```
+
+Methods need their object: `opcua-sim call 'ns=4;i=7002' --object 'ns=4;i=5001'`.
 
 ## Faults
 

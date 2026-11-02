@@ -1,0 +1,68 @@
+# Beckhoff TwinCAT 3 OPC UA server (TF6100): symbol paths as string node IDs
+# The variables are an example program; only the way the server presents them follows the sources.
+name: beckhoff-twincat3
+description: "Beckhoff TwinCAT 3 OPC UA server (TF6100): symbol paths as string node IDs"
+identification:
+  manufacturer: Beckhoff (simulated)
+  model: TF6100 server layout
+model: plc_machine
+address_space:
+  namespace: urn:BeckhoffAutomation:Ua:PLC1
+  namespaces:
+    - urn:opcua-sim:server
+    - urn:opcua-sim:reserved:2
+    - urn:opcua-sim:reserved:3
+    - urn:BeckhoffAutomation:Ua:PLC1
+variables:
+  - name: Run
+    node_id: 'MAIN.bRun'
+    path: ['PLC1', 'MAIN']
+    type: Boolean
+    model: run
+    writable: true
+  - name: Reset
+    node_id: 'MAIN.bReset'
+    path: ['PLC1', 'MAIN']
+    type: Boolean
+    model: reset
+    writable: true
+  - name: SpeedSetpoint
+    node_id: 'MAIN.fSpeedSetpoint'
+    path: ['PLC1', 'MAIN']
+    type: Float
+    model: speed_setpoint
+    writable: true
+    min: 0
+    max: 1500
+  - name: Speed
+    node_id: 'MAIN.fSpeed'
+    path: ['PLC1', 'MAIN']
+    type: Float
+    model: speed
+  - name: Temperature
+    node_id: 'MAIN.fTemperature'
+    path: ['PLC1', 'MAIN']
+    type: Float
+    model: temperature
+  - name: Parts
+    node_id: 'MAIN.nParts'
+    path: ['PLC1', 'MAIN']
+    type: Int32
+    model: parts
+  - name: Fault
+    node_id: 'MAIN.bFault'
+    path: ['PLC1', 'MAIN']
+    type: Boolean
+    model: fault
+  - name: FaultCode
+    node_id: 'MAIN.nFaultCode'
+    path: ['PLC1', 'MAIN']
+    type: Int16
+    model: fault_code
+sources:
+  - 'Beckhoff Information System, TF6100: namespace URI for the first PLC runtime; the index is not fixed and must be looked up'
+  - 'Cybus guide, not Beckhoff: node IDs like ns=4;s=MAIN.nCounter, ns=4 typical, PLC1 folder, security defaults'
+limits:
+  - Not checked against a real TwinCAT system
+  - 'Real defaults since TF6100 4.3.28 and 4.4.0 (third party): encrypted endpoints only, no anonymous access. Set security and users in your bench to match'
+  - Beckhoff also shows a URI form with the host name; indices 2 and 3 are placeholders

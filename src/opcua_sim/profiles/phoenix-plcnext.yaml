@@ -1,0 +1,65 @@
+# Phoenix Contact PLCnext embedded OPC UA server: Global Data Space node IDs
+# The variables are an example program; only the way the server presents them follows the sources.
+name: phoenix-plcnext
+description: "Phoenix Contact PLCnext embedded OPC UA server: Global Data Space node IDs"
+identification:
+  manufacturer: Phoenix Contact (simulated)
+  model: PLCnext server layout
+model: plc_machine
+address_space:
+  namespace: http://phoenixcontact.com/OpcUA/PLCnext/GlobalDataSpace/
+  namespaces:
+    - urn:opcua-sim:server
+    - http://phoenixcontact.com/OpcUA/PLCnext/GlobalDataSpace/
+variables:
+  - name: Run
+    node_id: 'Arp.Plc.Eclr/MainInstance.xRun'
+    path: ['PLCnext', 'Arp.Plc.Eclr', 'MainInstance']
+    type: Boolean
+    model: run
+    writable: true
+  - name: Reset
+    node_id: 'Arp.Plc.Eclr/MainInstance.xReset'
+    path: ['PLCnext', 'Arp.Plc.Eclr', 'MainInstance']
+    type: Boolean
+    model: reset
+    writable: true
+  - name: SpeedSetpoint
+    node_id: 'Arp.Plc.Eclr/MainInstance.rSpeedSetpoint'
+    path: ['PLCnext', 'Arp.Plc.Eclr', 'MainInstance']
+    type: Float
+    model: speed_setpoint
+    writable: true
+    min: 0
+    max: 1500
+  - name: Speed
+    node_id: 'Arp.Plc.Eclr/MainInstance.rSpeed'
+    path: ['PLCnext', 'Arp.Plc.Eclr', 'MainInstance']
+    type: Float
+    model: speed
+  - name: Temperature
+    node_id: 'Arp.Plc.Eclr/MainInstance.rTemperature'
+    path: ['PLCnext', 'Arp.Plc.Eclr', 'MainInstance']
+    type: Float
+    model: temperature
+  - name: Parts
+    node_id: 'Arp.Plc.Eclr/MainInstance.diParts'
+    path: ['PLCnext', 'Arp.Plc.Eclr', 'MainInstance']
+    type: Int32
+    model: parts
+  - name: Fault
+    node_id: 'Arp.Plc.Eclr/MainInstance.xFault'
+    path: ['PLCnext', 'Arp.Plc.Eclr', 'MainInstance']
+    type: Boolean
+    model: fault
+  - name: FaultCode
+    node_id: 'Arp.Plc.Eclr/MainInstance.iFaultCode'
+    path: ['PLCnext', 'Arp.Plc.Eclr', 'MainInstance']
+    type: Int16
+    model: fault_code
+sources:
+  - 'plcnext.help, Global Data Space: namespace URI and identifier form [component]/[program].[variable], example Arp.Plc.Eclr/PG_AllTypes1.DIntVar'
+limits:
+  - Not checked against a real controller
+  - The namespace index and the folder names are not in the source and are assumptions
+  - The instance name MainInstance is an example
