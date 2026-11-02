@@ -43,6 +43,9 @@ $ opcua-sim read pump.Speed --timeout 1
 opcua-sim: no answer in time
 ```
 
+Walkthroughs, CI recipes and troubleshooting are in the
+[wiki](https://github.com/steitec/opcua-sim/wiki); this README is the reference.
+
 ## Why
 
 OPC UA demo servers are good at showing changing numbers. Client code breaks on other things:
