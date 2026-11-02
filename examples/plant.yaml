@@ -1,0 +1,7 @@
+# A small plant: run it with  opcua-sim serve --bench examples/plant.yaml
+name: demo plant
+devices:
+  - {name: oven, profile: temperature-controller}
+  - {name: pump, profile: drive}
+  - {name: tank_pressure, profile: pressure-transmitter, params: {process: 4.0}}
+  - {name: meter, profile: energy-meter, serial_number: EM-0042}

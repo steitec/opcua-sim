@@ -1,0 +1,26 @@
+# Frequency converter: state machine with ramps; a trip latches until Reset.
+# Generic device: no real product's address space.
+name: drive
+description: Frequency converter with Start, Stop, Reset, ramps and a latching trip
+identification:
+  manufacturer: steitec
+  model: SIM-VFD1
+  hardware_revision: "1.0"
+  software_revision: "1.0"
+model: drive
+variables:
+  - {name: SpeedSetpoint, unit: Hz, range: [0, 50], model: speed_setpoint, writable: true,
+     min: 0, max: 50}
+  - {name: Speed, unit: Hz, range: [0, 50], model: speed}
+  - {name: MotorCurrent, unit: A, range: [0, 16], model: current}
+  - {name: State, type: Int32, model: state,
+     description: "0 stopped, 1 running, 2 stopping, 3 tripped"}
+  - {name: FaultCode, type: Int32, model: fault_code}
+  - {name: Running, type: Boolean, model: running}
+methods:
+  - {name: Start, model: start, description: Ramp up; refused while tripped}
+  - {name: Stop, model: stop, description: Ramp down}
+  - {name: Reset, model: reset, description: Acknowledge a trip whose cause is gone}
+alarms:
+  - {name: DriveTrip, kind: discrete, when: tripped, severity: 900, message: "Drive tripped"}
+  - {name: Overload, kind: discrete, when: overload, severity: 700, message: "Motor overload"}

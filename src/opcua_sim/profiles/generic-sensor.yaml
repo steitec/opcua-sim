@@ -1,0 +1,16 @@
+# No model: variables fed by signal sources, a starting point for your own profile.
+name: generic-sensor
+description: Variables fed by signal sources, without device behaviour
+identification:
+  manufacturer: steitec
+  model: SIM-GEN1
+variables:
+  - {name: Temperature, unit: degC, range: [0, 50],
+     source: {kind: sine, offset: 25, amplitude: 5, period: 60}}
+  - {name: Humidity, unit: "%", range: [0, 100], source: {kind: noise, offset: 45, amplitude: 0.5}}
+  - {name: Counter, type: UInt32, source: {kind: ramp, offset: 0, amplitude: 1000, period: 1000}}
+  - {name: Tag, type: String, value: "line 1"}
+  - {name: Enabled, type: Boolean, value: true, writable: true}
+alarms:
+  - {name: TemperatureLevel, kind: level, variable: Temperature, high: 29, low: 21, deadband: 0.2,
+     message: "Temperature out of limits"}

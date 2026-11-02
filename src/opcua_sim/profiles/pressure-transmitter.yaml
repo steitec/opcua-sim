@@ -1,0 +1,33 @@
+# Process pressure transmitter. Failure and saturation currents follow NAMUR NE 43,
+# the health states NE 107. Generic device: no real product's address space.
+name: pressure-transmitter
+description: Pressure transmitter with 4-20 mA, zero trim, self test and level alarms
+identification:
+  manufacturer: steitec
+  model: SIM-PT1
+  hardware_revision: "1.0"
+  software_revision: "1.0"
+  device_revision: "1"
+model: transmitter
+model_params: {process: 6.0, lower_range: 0.0, upper_range: 16.0}
+variables:
+  - {name: Pressure, unit: bar, range: [0, 16], model: pv, description: "process value"}
+  - {name: OutputCurrent, unit: mA, range: [3.6, 21], model: output_ma,
+     description: "loop current; 3.6 or 21 mA = failure (NE 43)"}
+  - {name: LowerRangeValue, unit: bar, model: lower_range, writable: true}
+  - {name: UpperRangeValue, unit: bar, model: upper_range, writable: true}
+  - {name: DampingSeconds, unit: s, model: damping, writable: true, min: 0, max: 60}
+  - {name: ZeroOffset, unit: bar, model: zero_offset}
+methods:
+  - name: ZeroTrim
+    model: zero_trim
+    description: Take the present pressure as zero
+    outputs: [{name: Offset, type: Double}]
+  - name: StartSelfTest
+    model: self_test
+    description: Run the self test; health is CHECK_FUNCTION meanwhile
+alarms:
+  - {name: PressureLevel, kind: level, variable: Pressure, message: "Pressure out of limits",
+     high_high: 15, high: 12, low: 1, low_low: 0.5, deadband: 0.1}
+  - {name: SensorFailure, kind: discrete, when: sensor_break, severity: 900,
+     message: "Pressure sensor failed"}

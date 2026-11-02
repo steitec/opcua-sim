@@ -1,0 +1,24 @@
+# Three-phase energy meter whose counter counts. Generic device: no real product's address space.
+name: energy-meter
+description: Three-phase energy meter with a live energy counter
+identification:
+  manufacturer: steitec
+  model: SIM-EM1
+  hardware_revision: "1.0"
+  software_revision: "1.0"
+model: energy_meter
+variables:
+  - {name: VoltageL1, unit: V, range: [0, 300], model: voltage_l1}
+  - {name: VoltageL2, unit: V, range: [0, 300], model: voltage_l2}
+  - {name: VoltageL3, unit: V, range: [0, 300], model: voltage_l3}
+  - {name: Current, unit: A, range: [0, 100], model: current, writable: true, min: 0, max: 100}
+  - {name: PowerFactor, range: [0, 1], model: power_factor, writable: true, min: 0, max: 1}
+  - {name: ActivePower, unit: W, model: power}
+  - {name: Energy, unit: kWh, model: energy}
+methods:
+  - name: ResetEnergy
+    model: reset_energy
+    description: Set the energy counter to zero
+    outputs: [{name: Before, type: Double}]
+alarms:
+  - {name: PhaseLoss, kind: discrete, when: phase_loss, severity: 800, message: "Phase lost"}

@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opcua-sim"
+version = "0.1.0"
+description = "Simulated OPC UA devices with behaviour, NE 107 health, real alarms and fault injection, for testing SCADA, HMI and gateway code"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Ralf Steinert"}]
+requires-python = ">=3.10"
+dependencies = ["asyncua>=2.1,<3", "pyyaml>=6"]
+keywords = ["opc-ua", "opcua", "simulator", "scada", "hmi", "industrial automation",
+            "ne107", "test automation", "pytest"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Manufacturing",
+    "Framework :: Pytest",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Testing",
+    "Topic :: System :: Hardware",
+]
+
+[project.urls]
+Homepage = "https://github.com/steitec/opcua-sim"
+Repository = "https://github.com/steitec/opcua-sim"
+Changelog = "https://github.com/steitec/opcua-sim/blob/main/CHANGELOG.md"
+Issues = "https://github.com/steitec/opcua-sim/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "build>=1.2"]
+
+[project.scripts]
+opcua-sim = "opcua_sim.cli:main"
+
+[project.entry-points.pytest11]
+opcua_sim = "opcua_sim.pytest_plugin"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+opcua_sim = ["profiles/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["error"]

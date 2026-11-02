@@ -1,0 +1,26 @@
+# Single-loop temperature controller on a slow first-order plant.
+# Generic device: no real product's address space.
+name: temperature-controller
+description: PI temperature controller with setpoint, manual mode and alarms
+identification:
+  manufacturer: steitec
+  model: SIM-TC1
+  hardware_revision: "1.0"
+  software_revision: "1.0"
+model: temperature_controller
+variables:
+  - {name: ProcessValue, unit: degC, range: [-50, 300], model: pv}
+  - {name: Setpoint, unit: degC, range: [-50, 300], model: setpoint, writable: true,
+     min: -50, max: 280}
+  - {name: Output, unit: "%", range: [0, 100], model: output}
+  - {name: ManualOutput, unit: "%", range: [0, 100], model: manual_output, writable: true}
+  - {name: Manual, type: Boolean, model: manual, writable: true}
+  - {name: Running, type: Boolean, model: running}
+methods:
+  - {name: Start, model: start, description: Start the control loop}
+  - {name: Stop, model: stop, description: Stop the control loop}
+alarms:
+  - {name: TemperatureLevel, kind: level, variable: ProcessValue, deadband: 0.5,
+     message: "Temperature out of limits", high_high: 280, high: 250}
+  - {name: SensorBreak, kind: discrete, when: sensor_break, severity: 900,
+     message: "Temperature sensor broken"}
