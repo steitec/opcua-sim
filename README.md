@@ -280,6 +280,12 @@ Do not put this on a network you do not trust. It is a test tool:
   cross the wire in plain text
 - Certificates are self-signed and created at every start; client certificates are not checked
 
+## Browser demo
+
+[`web/`](web/) holds a static demo page. It runs the real device code in the browser with
+[Pyodide](https://pyodide.org), but not the OPC UA wire protocol, because a browser has no TCP
+sockets. To test a client, install opcua-sim.
+
 ## License
 
 [MIT](LICENSE). The OPC UA stack [asyncua](https://github.com/FreeOpcUa/opcua-asyncio) is LGPL-3.0

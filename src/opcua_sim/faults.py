@@ -37,9 +37,8 @@ restart            downtime=2                 server gone, comes back with no se
 from __future__ import annotations
 
 import math
+import re
 from typing import Any
-
-from asyncua import ua
 
 from .models import HEALTH, NORMAL
 
@@ -61,7 +60,9 @@ SERVER = {
     "service_level": {"value": None},
     "restart": {"downtime": 2.0},
 }
-SERVER_STATES = {state.name: state.value for state in ua.ServerState}
+#: ServerState of OPC UA Part 5; no asyncua here, devices also run without it (browser demo).
+SERVER_STATES = {"Running": 0, "Failed": 1, "NoConfiguration": 2, "Suspended": 3, "Shutdown": 4,
+                 "Test": 5, "CommunicationFault": 6, "Unknown": 7}
 
 
 class FaultError(ValueError):
@@ -70,10 +71,21 @@ class FaultError(ValueError):
 
 def status_code(name: Any) -> int:
     """The number of an OPC UA status code name such as ``BadSensorFailure``."""
+    from asyncua import ua
+
     value = getattr(ua.StatusCodes, str(name), None)
     if not isinstance(value, int):
         raise FaultError(f"unknown OPC UA status code {name!r}")
     return value
+
+
+def check_status(name: Any) -> None:
+    """Refuse a status code that does not exist; without asyncua only its form can be checked."""
+    try:
+        status_code(name)
+    except ImportError:
+        if not re.fullmatch(r"(Good|Uncertain|Bad)[A-Za-z0-9]*", str(name)):
+            raise FaultError(f"unknown OPC UA status code {name!r}") from None
 
 
 def check_params(kind: str, defaults: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
@@ -141,5 +153,5 @@ def check_device(kind: str, params: dict[str, Any], variables: set[str],
             raise FaultError("health state must be one of "
                              f"{', '.join(h for h in HEALTH if h != NORMAL)}")
     if "status" in full:
-        status_code(full["status"])
+        check_status(full["status"])
     return full

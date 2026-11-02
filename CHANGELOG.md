@@ -19,3 +19,4 @@ First version.
 - Six profiles that present a simulated device the way a real product does, each naming its
   sources and limits: Siemens S7-1500, Beckhoff TwinCAT 3, Phoenix Contact PLCnext, CODESYS,
   Omron NJ/NX, Leuze BCL 300
+- Browser demo in `web/`: the device code in Pyodide, without the wire protocol

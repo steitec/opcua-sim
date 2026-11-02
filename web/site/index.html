@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>opcua-sim – simulated OPC UA devices in your browser</title>
+  <meta name="description" content="Try opcua-sim live: a drive, a temperature controller, a transmitter, an energy meter, an S7-1500 style PLC and a bar code reader that behave and fail. Test SCADA, HMI and gateway code without the plant.">
+  <meta property="og:title" content="opcua-sim – simulated OPC UA devices in your browser">
+  <meta property="og:description" content="Start a drive, trip it, break a sensor, acknowledge the alarm, restart the server. Real opcua-sim device code, running in your browser.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://opcua-sim.steitec.net/">
+  <meta property="og:image" content="https://opcua-sim.steitec.net/img/bench.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body class="loading">
+  <header class="hero">
+    <p class="eyebrow">opcua-sim · open source</p>
+    <h1>Test your OPC UA client against devices that fail.</h1>
+    <p class="lead">Demo servers show changing numbers. opcua-sim gives you what breaks client code:
+      status codes, a latched trip, alarms waiting for an acknowledge, a server restart that takes your
+      session with it. Start the pump, then break things. The device code runs right here in your browser.</p>
+  </header>
+
+  <main>
+    <section class="bench" aria-label="Simulated OPC UA devices">
+      <div class="instruments">
+        <article class="front" id="pump" aria-label="Drive">
+          <header class="front-head">
+            <span class="model">pump <small>(drive)</small></span>
+            <span class="kind">frequency converter</span>
+            <span class="indicators">
+              <span class="badge fault" data-testid="fault-badge-pump" hidden></span>
+              <span class="badge health" data-testid="health-pump">–</span>
+            </span>
+          </header>
+          <div class="ctrl">
+            <div class="lcd" data-testid="pump-speed">– – –</div>
+            <div class="ctrl-side">
+              <span><small>state</small><b data-testid="pump-state">–</b></span>
+              <span><small>set point</small><b data-testid="pump-setpoint">–</b></span>
+              <span><small>motor current</small><b data-testid="pump-current">–</b></span>
+            </div>
+          </div>
+          <p class="powering">powering up…</p>
+        </article>
+
+        <article class="front" id="tank_pressure" aria-label="Pressure transmitter">
+          <header class="front-head">
+            <span class="model">tank_pressure <small>(transmitter)</small></span>
+            <span class="kind">4–20 mA, NE 43</span>
+            <span class="indicators">
+              <span class="badge fault" data-testid="fault-badge-tank_pressure" hidden></span>
+              <span class="badge health" data-testid="health-tank_pressure">–</span>
+            </span>
+          </header>
+          <div class="ctrl">
+            <div class="lcd" data-testid="pressure-value">– – –</div>
+            <div class="ctrl-side">
+              <span><small>loop current</small><b data-testid="pressure-current">–</b></span>
+              <span><small>status</small><b data-testid="pressure-status">–</b></span>
+            </div>
+          </div>
+          <p class="powering">powering up…</p>
+        </article>
+
+        <article class="front" id="oven" aria-label="Temperature controller">
+          <header class="front-head">
+            <span class="model">oven <small>(controller)</small></span>
+            <span class="kind">PI loop</span>
+            <span class="indicators">
+              <span class="badge fault" data-testid="fault-badge-oven" hidden></span>
+              <span class="badge health" data-testid="health-oven">–</span>
+            </span>
+          </header>
+          <div class="ctrl">
+            <div class="lcd" data-testid="oven-value">– – –</div>
+            <div class="ctrl-side">
+              <span><small>set point</small><b data-testid="oven-setpoint">–</b></span>
+              <span><small>output</small><b data-testid="oven-output">–</b></span>
+              <span class="bar"><span id="oven-bar"></span></span>
+            </div>
+          </div>
+          <p class="powering">powering up…</p>
+        </article>
+
+        <article class="front" id="meter" aria-label="Energy meter">
+          <header class="front-head">
+            <span class="model">meter <small>(energy meter)</small></span>
+            <span class="kind">three phases</span>
+            <span class="indicators">
+              <span class="badge fault" data-testid="fault-badge-meter" hidden></span>
+              <span class="badge health" data-testid="health-meter">–</span>
+            </span>
+          </header>
+          <div class="totals">
+            <span><small>L1</small><b data-testid="meter-l1">–</b></span>
+            <span><small>L2</small><b data-testid="meter-l2">–</b></span>
+            <span><small>power</small><b data-testid="meter-power">–</b></span>
+            <span><small>energy</small><b data-testid="meter-energy">–</b></span>
+          </div>
+          <p class="powering">powering up…</p>
+        </article>
+
+        <article class="front" id="plc" aria-label="PLC with an S7-1500 style server">
+          <header class="front-head">
+            <span class="model">plc <small>(S7-1500 layout, simulated)</small></span>
+            <span class="kind"><code>ns=3;s="DB_Line"."Speed"</code></span>
+            <span class="indicators">
+              <span class="badge fault" data-testid="fault-badge-plc" hidden></span>
+            </span>
+          </header>
+          <div class="totals">
+            <span><small>Run</small><b data-testid="plc-run">–</b></span>
+            <span><small>Speed</small><b data-testid="plc-speed">–</b></span>
+            <span><small>Parts</small><b data-testid="plc-parts">–</b></span>
+            <span><small>Fault</small><b data-testid="plc-fault">–</b></span>
+          </div>
+          <p class="powering">powering up…</p>
+        </article>
+
+        <article class="front" id="reader" aria-label="Bar code reader">
+          <header class="front-head">
+            <span class="model">reader <small>(BCL 300 layout, simulated)</small></span>
+            <span class="kind"><code>ns=4;i=6205</code></span>
+            <span class="indicators">
+              <span class="badge fault" data-testid="fault-badge-reader" hidden></span>
+            </span>
+          </header>
+          <div class="totals">
+            <span><small>status</small><b data-testid="reader-status">–</b></span>
+            <span><small>last code</small><b data-testid="reader-code">–</b></span>
+            <span><small>good reads</small><b data-testid="reader-ok">–</b></span>
+            <span><small>bad reads</small><b data-testid="reader-bad">–</b></span>
+          </div>
+          <p class="powering">powering up…</p>
+        </article>
+      </div>
+
+      <div class="console">
+        <div class="targets" role="group" aria-label="Connected server">
+          <button type="button" data-testid="target-plant" data-target="plant" aria-pressed="true">plant</button>
+          <button type="button" data-testid="target-s7" data-target="s7" aria-pressed="false">S7-1500</button>
+          <button type="button" data-testid="target-reader" data-target="reader" aria-pressed="false">BCL 300</button>
+          <span class="badge session" data-testid="session">no session</span>
+          <span class="status" data-testid="status" role="status">starting…</span>
+        </div>
+        <div class="terminal" data-testid="terminal-output" aria-live="polite"></div>
+        <form class="prompt" id="prompt">
+          <label for="line" id="prompt-label">plant&gt;</label>
+          <input id="line" data-testid="terminal-input" maxlength="200" autocomplete="off"
+                 autocapitalize="off" spellcheck="false" placeholder="e.g. read pump.Speed (help)" disabled>
+          <button type="submit" disabled>Send</button>
+        </form>
+
+        <p class="hint">Alarms retained on this server:</p>
+        <ul class="alarms" data-testid="alarms"><li class="none">none</li></ul>
+
+        <p class="hint">Try these in order:</p>
+        <div class="chips" id="chips"></div>
+
+        <p class="hint">Break something:</p>
+        <div class="faults">
+          <button type="button" data-testid="fault-trip" data-line="inject pump trip code=4" data-to="plant" disabled>Pump trips</button>
+          <button type="button" data-testid="fault-sensor" data-line="inject tank_pressure sensor_break" data-to="plant" disabled>Pressure sensor breaks</button>
+          <button type="button" data-testid="fault-stale" data-line="inject meter freeze" data-to="plant" disabled>Meter values freeze</button>
+          <button type="button" data-testid="fault-delay" data-line="inject server delay seconds=2" disabled>Server answers late</button>
+          <button type="button" data-testid="fault-blackhole" data-line="inject server blackhole" disabled>Link goes silent</button>
+          <button type="button" data-testid="fault-restart" data-line="inject server restart downtime=5" disabled>Server restarts</button>
+          <button type="button" data-testid="reset" class="reset" disabled>Reset everything</button>
+        </div>
+      </div>
+
+      <div class="fallback" data-testid="fallback" hidden>
+        <p><strong>The live demo could not start here.</strong> <span id="fallback-reason"></span></p>
+        <p>This is what it looks like. Everything below works over real OPC UA with <code>pip install opcua-sim</code>.</p>
+        <img src="img/bench.png" alt="The demo: simulated devices next to a terminal" width="1200" height="630">
+        <button type="button" data-testid="retry" id="retry">Retry</button>
+      </div>
+    </section>
+
+    <section class="explain">
+      <h2>What you just used</h2>
+      <div class="flow" aria-label="Your code talks to opcua-sim over OPC UA instead of a real device">
+        <span class="box">your SCADA, HMI, gateway or Python code</span>
+        <span class="arrow">opc.tcp://…:4840 →</span>
+        <span class="box sim">opcua-sim</span>
+        <span class="instead">instead of the plant</span>
+      </div>
+      <p><strong>What runs here and what does not.</strong> The devices, their behaviour, faults and alarm
+        states on this page are the real opcua-sim code. The OPC UA wire protocol is not: a browser has no TCP
+        sockets, so your commands reach the devices directly and the <code>tx</code> lines name the service,
+        not the bytes. This page answers by the same rules, but to test a client you install opcua-sim.
+        There it is a real server on <code>opc.tcp://</code>, built on
+        <a href="https://github.com/FreeOpcUa/opcua-asyncio">asyncua</a>, checked with asyncua and node-opcua clients.</p>
+      <p><strong>Health.</strong> The badge on each device is its <code>DeviceHealth</code> node, with the
+        NAMUR NE 107 states: normal, failure, check function, off spec, maintenance required.</p>
+      <p><strong>Product layouts.</strong> The S7-1500 and BCL 300 servers copy how those products present their
+        nodes, as far as public documents describe it. They are not complete copies and were not compared with
+        real hardware. Each profile
+        <a href="https://github.com/steitec/opcua-sim#product-profiles">names its sources and what is assumed</a>.</p>
+    </section>
+
+    <section class="code">
+      <h2>The same thing against a real OPC UA server</h2>
+      <pre><code>pip install opcua-sim
+opcua-sim serve --bench plant.yaml      # the plant from this page, on opc.tcp://127.0.0.1:4840</code></pre>
+      <pre><code>import asyncio
+from asyncua import Client, ua
+
+async def main():
+    async with Client("opc.tcp://127.0.0.1:4840") as client:
+        idx = await client.get_namespace_index("urn:steitec:opcua-sim")
+        methods = client.get_node(ua.NodeId("pump.MethodSet", idx))
+        await methods.call_method(ua.NodeId("pump.Start", idx))
+        await asyncio.sleep(2)
+        print(await client.get_node(ua.NodeId("pump.Speed", idx)).read_value())   # about 20.0
+
+asyncio.run(main())</code></pre>
+      <p>And in a test, with a new server for each test:</p>
+      <pre><code>def test_notices_a_device_failure(opcua_bench):
+    opcua_bench.inject("drive", "bad_status", variable="Speed", status="BadDeviceFailure")
+    with pytest.raises(ua.uaerrors.BadDeviceFailure):
+        read_speed(opcua_bench.url)       # your code</code></pre>
+    </section>
+
+    <section class="more">
+      <h2>What else it does</h2>
+      <ul>
+        <li><strong>Real alarms</strong>: level and discrete alarms as OPC UA events, <code>Acknowledge</code> with the
+          right <code>EventId</code>, <code>ConditionRefresh</code> after a reconnect.</li>
+        <li><strong>Faults</strong>: any status code on any variable, frozen values, old timestamps, drift, refused writes
+          and calls, late answers, dropped and refused connections, server state and service level.</li>
+        <li><strong>Security</strong>: None, Sign and SignAndEncrypt endpoints, user names, read-only users.</li>
+        <li><strong>Your own devices</strong> from a YAML file. <code>opcua-sim map</code> prints the address space.</li>
+        <li><strong>Profiles</strong>: pressure transmitter, temperature controller, drive, energy meter, generic sensor,
+          and layouts after Siemens S7-1500, Beckhoff TwinCAT 3, Phoenix PLCnext, CODESYS, Omron NJ/NX and Leuze BCL 300.</li>
+      </ul>
+      <p class="links">
+        <a href="https://github.com/steitec/opcua-sim">Source on GitHub</a>
+        <a href="https://pypi.org/project/opcua-sim/">PyPI</a>
+        <a href="https://github.com/steitec/opcua-sim/issues">Questions or ideas? Open an issue</a>
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>The simulation runs entirely in your browser. This page sets no cookies, has no tracking and sends
+      nothing anywhere. <a href="privacy.html">Privacy</a></p>
+    <p>opcua-sim <span id="version"></span> · MIT licensed · by <a href="https://github.com/steitec">steitec</a> ·
+      OPC UA is a trademark of the OPC Foundation. Siemens, Beckhoff, Phoenix Contact, CODESYS, Omron and Leuze are
+      trademarks of their owners; opcua-sim is not affiliated with them.</p>
+  </footer>
+</body>
+</html>
