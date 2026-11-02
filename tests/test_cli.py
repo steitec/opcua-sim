@@ -97,7 +97,8 @@ def _free_port():
 def test_no_bench_is_a_clean_error(capsys):
     assert main(["list", "--control-port", str(_free_port())]) == 1
     assert "no bench" in capsys.readouterr().err
-    assert main(["read", "pump.Speed", "--timeout", "1", "--url",
+    # A long timeout: Windows retries a refused connection for about two seconds.
+    assert main(["read", "pump.Speed", "--timeout", "8", "--url",
                  f"opc.tcp://127.0.0.1:{_free_port()}"]) == 1
     assert "no connection" in capsys.readouterr().err
 
