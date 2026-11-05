@@ -9,13 +9,13 @@
 [![PyPI](https://img.shields.io/pypi/v/opcua-sim?v=0.1.0)](https://pypi.org/project/opcua-sim/)
 [![Python](https://img.shields.io/pypi/pyversions/opcua-sim?v=0.1.0)](https://pypi.org/project/opcua-sim/)
 [![License](https://img.shields.io/pypi/l/opcua-sim?v=0.1.0)](https://github.com/steitec/opcua-sim/blob/main/LICENSE)
-[![Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://opcua-sim.steitec.net)
+[![Demo](https://img.shields.io/badge/demo-live%20in%20your%20browser-2ea44f)](https://opcua-sim.steitec.net)
 
 Simulated OPC UA devices that **behave and fail**: a drive that ramps up after `Start` and
 latches a trip until `Reset`, a transmitter whose broken sensor reads `BadSensorFailure` with
 health `FAILURE` and 3.6 mA on the loop, alarms that arrive as real OPC UA events and wait for
 your `Acknowledge`. Develop and test SCADA links, HMIs, gateways and data loggers without the
-plant, also in CI. **[Look at it in your browser](https://opcua-sim.steitec.net)**, no
+plant, also in CI. **[Try it in your browser](https://opcua-sim.steitec.net)**, no
 install needed.
 
 ```console
