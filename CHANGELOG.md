@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 (2026-11-06)
+
+- Docker image `ghcr.io/steitec/opcua-sim` for clients that are not written in Python: the demo
+  plant with an endpoint without security and an encrypted one, the control channel on port 4841
+- `serve --certificate-dir DIR` keeps the server certificate and key, or uses your own, so a
+  client has to trust the server only once
+- The certificate is issued for `--endpoint-host` instead of the machine's host name
+- `--endpoint-host` and `--certificate-dir` default to `OPCUA_SIM_ENDPOINT_HOST` and
+  `OPCUA_SIM_CERTIFICATE_DIR`
+
 ## 0.1.0 (2026-11-02)
 
 First version.
