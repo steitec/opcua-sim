@@ -122,12 +122,16 @@ class Bench:
     # -- life cycle ------------------------------------------------------------------------
 
     def start(self, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
-              control_port: int | None = CONTROL_PORT, endpoint_host: str | None = None) -> "Bench":
+              control_port: int | None = CONTROL_PORT, endpoint_host: str | None = None,
+              certificate_dir: str | Path | None = None) -> "Bench":
         """Start in a background thread and return once clients can connect.
 
         ``port=0`` and ``control_port=0`` pick free ports; ``control_port=None`` has no
         control channel. ``endpoint_host`` is the host name in the endpoint URL, needed when
-        binding to all interfaces.
+        binding to all interfaces; the certificate is issued for it, too.
+        ``certificate_dir`` keeps the server certificate (``server-cert.der``) and key
+        (``server-key.pem``): they are used if they are there and created otherwise, so a
+        client has to trust the server only once. Without it, every start has a new one.
         """
         if self._thread is not None:
             raise BenchError("bench is already running")
@@ -135,7 +139,8 @@ class Bench:
         ready = threading.Event()
 
         def run() -> None:
-            asyncio.run(self._main(host, port, control_port, endpoint_host, ready, started))
+            asyncio.run(self._main(host, port, control_port, endpoint_host, certificate_dir,
+                                   ready, started))
 
         self._thread = threading.Thread(target=run, name="opcua-sim", daemon=True)
         self._thread.start()
@@ -165,13 +170,15 @@ class Bench:
         self.stop()
 
     async def _main(self, host: str, port: int, control_port: int | None,
-                    endpoint_host: str | None, ready: threading.Event,
+                    endpoint_host: str | None, certificate_dir: str | Path | None,
+                    ready: threading.Event,
                     started: dict[str, Any]) -> None:
         self._loop = asyncio.get_running_loop()
         self._stopping = asyncio.Event()
         all_interfaces = host in ("", "0.0.0.0")
         try:
-            await self._prepare_certificate()
+            await self._prepare_certificate(endpoint_host or socket.gethostname(),
+                                            certificate_dir)
             self._link = Link()
             await self._link.start(None if all_interfaces else host, port)
             self.port = self._link.port
@@ -195,19 +202,38 @@ class Bench:
         await asyncio.gather(ticker, return_exceptions=True)
         await self._shutdown()
 
-    async def _prepare_certificate(self) -> None:
+    async def _prepare_certificate(self, host_name: str,
+                                   certificate_dir: str | Path | None) -> None:
         if self.security == ["none"] or self._certificate is not None:
             return
         from asyncua.crypto.cert_gen import setup_self_signed_certificate
         from cryptography.x509.oid import ExtendedKeyUsageOID
 
-        self._certificate_dir = tempfile.TemporaryDirectory(prefix="opcua-sim-")
-        folder = Path(self._certificate_dir.name)
+        if certificate_dir is None:
+            self._certificate_dir = tempfile.TemporaryDirectory(prefix="opcua-sim-")
+            folder = Path(self._certificate_dir.name)
+        else:
+            folder = Path(certificate_dir)
+            try:
+                folder.mkdir(parents=True, exist_ok=True)
+            except OSError as error:
+                raise BenchError(f"certificate directory {folder}: {error}") from None
         pair = (folder / "server-cert.der", folder / "server-key.pem")
-        await setup_self_signed_certificate(
-            pair[1], pair[0], APPLICATION_URI, socket.gethostname(),
-            [ExtendedKeyUsageOID.CLIENT_AUTH, ExtendedKeyUsageOID.SERVER_AUTH],
-            {"organizationName": "steitec", "commonName": "opcua-sim"})
+        present = [path.is_file() for path in pair]
+        if all(present):  # someone's own pair, or one from an earlier start: keep it
+            self._certificate = pair
+            return
+        if any(present):
+            missing = pair[present.index(False)]
+            raise BenchError(f"{missing} is missing; put both {pair[0].name} and "
+                             f"{pair[1].name} into {folder}, or neither")
+        try:
+            await setup_self_signed_certificate(
+                pair[1], pair[0], APPLICATION_URI, host_name,
+                [ExtendedKeyUsageOID.CLIENT_AUTH, ExtendedKeyUsageOID.SERVER_AUTH],
+                {"organizationName": "steitec", "commonName": "opcua-sim"})
+        except OSError as error:
+            raise BenchError(f"cannot write the certificate to {folder}: {error}") from None
         self._certificate = pair
 
     async def _start_server(self) -> None:

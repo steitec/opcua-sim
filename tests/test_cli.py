@@ -131,3 +131,22 @@ def test_control_channel_stays_open_after_errors(plant):
 def test_request_reports_an_error():
     with pytest.raises(ControlError):
         request(_free_port(), {"list": True}, timeout=1)
+
+
+def test_serve_options_from_the_environment(monkeypatch):
+    from opcua_sim.cli import parser
+    monkeypatch.setenv("OPCUA_SIM_ENDPOINT_HOST", "opcua")
+    monkeypatch.setenv("OPCUA_SIM_CERTIFICATE_DIR", "/certs")
+    args = parser().parse_args(["serve", "--profile", "drive"])
+    assert (args.endpoint_host, args.certificate_dir) == ("opcua", "/certs")
+    args = parser().parse_args(["serve", "--profile", "drive", "--endpoint-host", "h",
+                                "--certificate-dir", "d"])
+    assert (args.endpoint_host, args.certificate_dir) == ("h", "d")
+
+
+def test_serve_without_the_environment(monkeypatch):
+    from opcua_sim.cli import parser
+    monkeypatch.delenv("OPCUA_SIM_ENDPOINT_HOST", raising=False)
+    monkeypatch.delenv("OPCUA_SIM_CERTIFICATE_DIR", raising=False)
+    args = parser().parse_args(["serve", "--profile", "drive"])
+    assert (args.endpoint_host, args.certificate_dir) == (None, None)

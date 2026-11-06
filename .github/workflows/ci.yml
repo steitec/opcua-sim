@@ -29,6 +29,35 @@ jobs:
       - run: pytest -v examples/test_example.py
       - run: pytest -v web/tests
 
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install .
+      - name: Build and start the image
+        run: |
+          docker build -t opcua-sim .
+          docker run -d --name sim -p 4840:4840 -p 127.0.0.1:4841:4841 opcua-sim
+          for _ in $(seq 30); do opcua-sim list && break; sleep 0.5; done
+      - name: OPC UA (plain and encrypted) and the control channel answer from outside
+        run: |
+          python docker/smoke.py
+          opcua-sim inject pump trip
+          opcua-sim list | grep trip
+          docker exec sim opcua-sim clear pump
+          ! opcua-sim list | grep trip
+      - name: Keeps its certificate, runs unprivileged and stops on SIGTERM
+        run: |
+          docker exec sim test -s /certs/server-cert.der
+          test "$(docker exec sim id -u)" = 10001
+          docker stop -t 5 sim
+          test "$(docker inspect -f '{{.State.ExitCode}}' sim)" = 0
+      - if: failure()
+        run: docker logs sim
+
   web:
     runs-on: ubuntu-latest
     defaults:
