@@ -6,9 +6,9 @@
 # opcua-sim
 
 [![CI](https://github.com/steitec/opcua-sim/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/steitec/opcua-sim/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/opcua-sim?v=0.1.0)](https://pypi.org/project/opcua-sim/)
-[![Python](https://img.shields.io/pypi/pyversions/opcua-sim?v=0.1.0)](https://pypi.org/project/opcua-sim/)
-[![License](https://img.shields.io/pypi/l/opcua-sim?v=0.1.0)](https://github.com/steitec/opcua-sim/blob/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/opcua-sim?v=0.2.0)](https://pypi.org/project/opcua-sim/)
+[![Python](https://img.shields.io/pypi/pyversions/opcua-sim?v=0.2.0)](https://pypi.org/project/opcua-sim/)
+[![License](https://img.shields.io/pypi/l/opcua-sim?v=0.2.0)](https://github.com/steitec/opcua-sim/blob/main/LICENSE)
 [![Demo](https://img.shields.io/badge/demo-live%20in%20your%20browser-2ea44f)](https://opcua-sim.steitec.net)
 
 Simulated OPC UA devices that **behave and fail**: a drive that ramps up after `Start` and
