@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opcua-sim"
-version = "0.1.0"
+version = "0.2.0"
 description = "Simulated OPC UA devices with behaviour, NE 107 health, real alarms and fault injection, for testing SCADA, HMI and gateway code"
 readme = "README.md"
 license = "MIT"

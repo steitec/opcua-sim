@@ -266,7 +266,7 @@ Starting a server takes about a second, because asyncua loads the whole standard
 
 | Command | |
 |---|---|
-| `serve --bench FILE` or `--profile NAME` | run; `--host`, `--port`, `--endpoint-host`, `--security` |
+| `serve --bench FILE` or `--profile NAME` | run; `--host`, `--port`, `--endpoint-host`, `--security`, `--certificate-dir` |
 | `profiles`, `map PROFILE` | what is there |
 | `browse`, `read`, `write`, `call`, `watch` | a small OPC UA client; `--url`, `--user`, `--password`, `--timeout` |
 | `inject`, `clear`, `set`, `get`, `list` | the control channel of a running bench; `--control-port` |
@@ -274,6 +274,67 @@ Starting a server takes about a second, because asyncua loads the whole standard
 `set` forces a value from outside (`null` hands it back to the simulation), `watch --alarms` prints
 alarm events. The control channel is one JSON object per line on port 4841, described in
 [`control.py`](src/opcua_sim/control.py).
+
+`--endpoint-host` and `--certificate-dir` take their default from `OPCUA_SIM_ENDPOINT_HOST` and
+`OPCUA_SIM_CERTIFICATE_DIR`. With a certificate directory, the server keeps its certificate
+(`server-cert.der`) and key (`server-key.pem`) there: it uses the pair it finds, or creates one
+on the first start, so a client has to trust the server only once. Put your own pair there to
+use it instead.
+
+## Docker
+
+For clients that are not written in Python, such as an HMI, a SCADA system or a gateway: the
+image runs the [demo plant](examples/plant.yaml) (`oven`, `pump`, `tank_pressure`, `meter`) with
+an endpoint without security and one with Basic256Sha256 SignAndEncrypt.
+
+```bash
+docker run --rm --name sim -p 4840:4840 -p 127.0.0.1:4841:4841 ghcr.io/steitec/opcua-sim
+```
+
+The endpoint URL says `opc.tcp://localhost:4840`, and many clients connect to the URL the
+server reports rather than the one you typed. So publish port 4840 as 4840, and where clients
+reach the container under another name, tell the server:
+
+```bash
+docker run --rm -p 4840:4840 -e OPCUA_SIM_ENDPOINT_HOST=plc-sim ghcr.io/steitec/opcua-sim
+```
+
+The control channel has no authentication, hence `127.0.0.1:` in front of it. It listens on all
+interfaces inside the container, so anything on the same Docker network can reach it. Inject a
+fault without installing anything, or send the JSON lines to port 4841 from your own test code:
+
+```bash
+docker exec sim opcua-sim inject pump trip
+docker exec sim opcua-sim clear pump
+```
+
+The certificate lives in `/certs` and is new for every container. Mount a directory there to
+keep it, or to bring your own; it must be writable for UID 10001 unless both files are there:
+
+```bash
+mkdir certs && sudo chown 10001 certs
+docker run --rm -p 4840:4840 -v "$PWD/certs":/certs ghcr.io/steitec/opcua-sim
+```
+
+Your own bench file, or other arguments, which replace the default command (keep
+`--host 0.0.0.0`, or the port is only reachable from inside the container):
+
+```bash
+docker run --rm -p 4840:4840 -v "$PWD/bench.yaml":/bench/bench.yaml ghcr.io/steitec/opcua-sim
+docker run --rm -p 4840:4840 ghcr.io/steitec/opcua-sim serve --profile siemens-s7-1500 --host 0.0.0.0
+```
+
+As a service container in GitHub Actions, for a job that runs on the runner itself (a job in a
+container reaches the service as `opcua`; then set `OPCUA_SIM_ENDPOINT_HOST: opcua`):
+
+```yaml
+services:
+  opcua:
+    image: ghcr.io/steitec/opcua-sim
+    ports:
+      - 4840:4840
+      - 127.0.0.1:4841:4841
+```
 
 ## Security
 
@@ -283,7 +344,8 @@ Do not put this on a network you do not trust. It is a test tool:
   authentication, is reachable too
 - Passwords are plain text in the bench file, and on an endpoint without encryption they can
   cross the wire in plain text
-- Certificates are self-signed and created at every start; client certificates are not checked
+- Certificates are self-signed and created at every start unless there is a certificate
+  directory; client certificates are not checked
 
 ## Browser demo
 

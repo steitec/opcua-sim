@@ -1,0 +1,8 @@
+# The default bench of the Docker image: examples/plant.yaml with an encrypted endpoint.
+name: demo plant
+security: [none, encrypt]
+devices:
+  - {name: oven, profile: temperature-controller}
+  - {name: pump, profile: drive}
+  - {name: tank_pressure, profile: pressure-transmitter, params: {process: 4.0}}
+  - {name: meter, profile: energy-meter, serial_number: EM-0042}

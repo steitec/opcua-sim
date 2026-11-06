@@ -5,6 +5,7 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import signal
 import sys
 import threading
@@ -50,7 +51,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     signal.signal(signal.SIGINT, lambda *_: stop.set())
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
     bench.start(host=args.host, port=args.port, control_port=args.control_port,
-                endpoint_host=args.endpoint_host)
+                endpoint_host=args.endpoint_host, certificate_dir=args.certificate_dir)
     print(f"opcua-sim: {len(bench.devices)} device(s) on {bench.url}, "
           f"control on :{bench.control_port}", flush=True)
     for device in bench.devices.values():
@@ -289,7 +290,12 @@ def parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1", help="address to bind (default loopback)")
     serve.add_argument("--port", type=int, default=DEFAULT_PORT)
     serve.add_argument("--control-port", type=int, default=CONTROL_PORT)
-    serve.add_argument("--endpoint-host", help="host name in the endpoint URL")
+    serve.add_argument("--endpoint-host", default=os.environ.get("OPCUA_SIM_ENDPOINT_HOST"),
+                       help="host name in the endpoint URL and the certificate "
+                            "(default $OPCUA_SIM_ENDPOINT_HOST)")
+    serve.add_argument("--certificate-dir", default=os.environ.get("OPCUA_SIM_CERTIFICATE_DIR"),
+                       help="keep the server certificate here instead of a new one at every "
+                            "start (default $OPCUA_SIM_CERTIFICATE_DIR)")
     serve.add_argument("--security", action="append", choices=["none", "sign", "encrypt"],
                        help="with --profile; repeat for several endpoints")
     serve.add_argument("--tick", type=float, default=0.1, help="simulation step in seconds")
