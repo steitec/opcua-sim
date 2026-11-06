@@ -1,5 +1,5 @@
 """Simulated OPC UA devices with behaviour, NE 107 health, real alarms and fault injection."""
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 from typing import Any  # noqa: E402
 

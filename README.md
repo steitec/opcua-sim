@@ -324,8 +324,10 @@ docker run --rm -p 4840:4840 -v "$PWD/bench.yaml":/bench/bench.yaml ghcr.io/stei
 docker run --rm -p 4840:4840 ghcr.io/steitec/opcua-sim serve --profile siemens-s7-1500 --host 0.0.0.0
 ```
 
-As a service container in GitHub Actions, for a job that runs on the runner itself (a job in a
-container reaches the service as `opcua`; then set `OPCUA_SIM_ENDPOINT_HOST: opcua`):
+The image reports itself healthy once the control channel answers, about three seconds after the
+start. As a service container in GitHub Actions, the job therefore starts with the server ready.
+For a job that runs on the runner itself (a job in a container reaches the service as `opcua`;
+then set `OPCUA_SIM_ENDPOINT_HOST: opcua`):
 
 ```yaml
 services:
@@ -335,6 +337,9 @@ services:
       - 4840:4840
       - 127.0.0.1:4841:4841
 ```
+
+The health check connects to port 4841 inside the container; with another `--control-port` the
+container stays unhealthy.
 
 ## Security
 

@@ -41,7 +41,12 @@ jobs:
         run: |
           docker build -t opcua-sim .
           docker run -d --name sim -p 4840:4840 -p 127.0.0.1:4841:4841 opcua-sim
-          for _ in $(seq 30); do opcua-sim list && break; sleep 0.5; done
+      - name: Reports healthy once it answers
+        run: |
+          for _ in $(seq 60); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' sim)" = healthy ] && break; sleep 1
+          done
+          test "$(docker inspect -f '{{.State.Health.Status}}' sim)" = healthy
       - name: OPC UA (plain and encrypted) and the control channel answer from outside
         run: |
           python docker/smoke.py
