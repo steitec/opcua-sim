@@ -1,7 +1,8 @@
 """Smoke test of the Docker image from outside: python docker/smoke.py [url]
 
 Connects without security and with Basic256Sha256 SignAndEncrypt, and checks that the
-endpoints carry the host name a client can reach.
+endpoints carry the URL a client can reach, which is the URL given here
+(default opc.tcp://localhost:4840).
 """
 import asyncio
 import sys
@@ -16,18 +17,19 @@ NAMESPACE = "urn:steitec:opcua-sim"
 
 
 async def main(url: str) -> None:
+    host = url.split("//", 1)[1].split(":", 1)[0]
     async with Client(url, timeout=5) as client:
         endpoints = await client.get_endpoints()
         modes = sorted(e.SecurityMode.name for e in endpoints)
         assert modes == ["None_", "SignAndEncrypt"], modes
-        assert all(e.EndpointUrl == "opc.tcp://localhost:4840" for e in endpoints), \
+        assert all(e.EndpointUrl == url for e in endpoints), \
             [e.EndpointUrl for e in endpoints]
         idx = await client.get_namespace_index(NAMESPACE)
         value = await client.get_node(ua.NodeId("oven.ProcessValue", idx)).read_value()
         print(f"none: oven.ProcessValue = {value}")
     with tempfile.TemporaryDirectory() as folder:
         cert, key = Path(folder) / "client.der", Path(folder) / "client.pem"
-        await setup_self_signed_certificate(key, cert, "urn:steitec:smoke", "localhost",
+        await setup_self_signed_certificate(key, cert, "urn:steitec:smoke", host,
                                             [ExtendedKeyUsageOID.CLIENT_AUTH],
                                             {"commonName": "smoke"})
         client = Client(url, timeout=5)

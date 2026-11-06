@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 (2026-11-06)
+
+- The Docker image has a health check: healthy once the control channel answers, which the
+  bench opens after the OPC UA server is up. A service container in GitHub Actions now waits
+  for it before the first step
+- Workflow `service-container.yml` runs the published image as a service container after every
+  release, for a job on the runner and for a job in a container
+
 ## 0.2.0 (2026-11-06)
 
 - Docker image `ghcr.io/steitec/opcua-sim` for clients that are not written in Python: the demo

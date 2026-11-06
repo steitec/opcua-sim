@@ -1,0 +1,82 @@
+name: Service container
+
+# Runs the published image the way the wiki (Testing-in-CI) shows it: as a service
+# container in GitHub Actions, once for a job on the runner and once for a job in a
+# container. Starts after every successful release, or by hand for any version.
+# It tests what is on ghcr.io, not the code of a pull request; ci.yml does that.
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Image tag, e.g. 0.2.1 or latest"
+        default: latest
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      pip: ${{ steps.version.outputs.pip }}
+    steps:
+      - id: version
+        env:
+          INPUT: ${{ inputs.version }}
+          RELEASED: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = workflow_run ]; then tag="${RELEASED#v}"; else tag="${INPUT}"; fi
+          [[ "${tag}" =~ ^(latest|[0-9]+\.[0-9]+\.[0-9]+.*)$ ]] || { echo "bad version ${tag}"; exit 1; }
+          if [ "${tag}" = latest ]; then pip=opcua-sim; else pip="opcua-sim==${tag}"; fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "pip=${pip}" >> "$GITHUB_OUTPUT"
+
+  on-runner:
+    needs: version
+    runs-on: ubuntu-latest
+    services:
+      opcua:
+        image: ghcr.io/steitec/opcua-sim:${{ needs.version.outputs.tag }}
+        ports:
+          - 4840:4840
+          - 127.0.0.1:4841:4841
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install "${{ needs.version.outputs.pip }}"
+      - name: Ready without waiting, plain and encrypted
+        run: python docker/smoke.py opc.tcp://localhost:4840
+      - name: Faults over the control channel on the host's loopback
+        run: |
+          opcua-sim inject pump trip
+          opcua-sim list | grep trip
+          opcua-sim clear pump
+          ! opcua-sim list | grep trip
+
+  in-container:
+    needs: version
+    runs-on: ubuntu-latest
+    container: python:3.13-slim
+    services:
+      opcua:
+        image: ghcr.io/steitec/opcua-sim:${{ needs.version.outputs.tag }}
+        env:
+          OPCUA_SIM_ENDPOINT_HOST: opcua
+    steps:
+      - uses: actions/checkout@v7
+      - run: pip install "${{ needs.version.outputs.pip }}"
+      - name: Ready without waiting, plain and encrypted, under the service name
+        run: python docker/smoke.py opc.tcp://opcua:4840
+      - name: Faults over the control channel of the service
+        run: |
+          opcua-sim inject pump trip --control-host opcua
+          opcua-sim list --control-host opcua | grep trip
+          opcua-sim clear pump --control-host opcua

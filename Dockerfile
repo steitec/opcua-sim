@@ -35,5 +35,9 @@ WORKDIR /bench
 ENV OPCUA_SIM_ENDPOINT_HOST=localhost \
     OPCUA_SIM_CERTIFICATE_DIR=/certs
 EXPOSE 4840 4841
+# Healthy once the control channel answers: the bench opens it after the OPC UA server
+# is up. A service container in GitHub Actions waits for this before the first step.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --start-interval=1s --retries=3 \
+    CMD ["python", "-c", "import socket; socket.create_connection(('127.0.0.1', 4841), 2).close()"]
 ENTRYPOINT ["opcua-sim"]
 CMD ["serve", "--bench", "/bench/bench.yaml", "--host", "0.0.0.0"]
